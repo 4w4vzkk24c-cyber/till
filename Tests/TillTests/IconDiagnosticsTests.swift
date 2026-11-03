@@ -32,7 +32,7 @@ import Testing
     @Test func logLineNamesDomainAndCodeButNeverTheURL() {
         let error = URLError(
             .notConnectedToInternet,
-            userInfo: [NSURLErrorFailingURLStringKey: "https://api.iconify.design/search?query=secret-query"])
+            userInfo: ["NSErrorFailingURLStringKey": "https://api.iconify.design/search?query=secret-query"])
         let line = IconLog.describe(error, operation: "search")
         #expect(line == "search failed: NSURLErrorDomain -1009")
         #expect(!line.contains("secret-query"))

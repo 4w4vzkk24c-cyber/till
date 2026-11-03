@@ -130,3 +130,6 @@ Static review only: the cloud container has no Swift toolchain, so nothing below
 **Operator run (test-010) and manual checklist:** see the plan, Task 8. Record the full `Test run with N tests` line and exit status here once pasted.
 
 **Diagnostics capture:** use the bounded form in the handoff addendum (`log show --info --debug`, raw output and exit status kept under `artifacts/diag-001/`). Bounded retention means an empty capture is not evidence that nothing failed. `xclog` does not apply to this native Mac app.
+
+**Result of Update 5, first compile (operator-reported, `artifacts/test-010`):** `** TEST FAILED **` from a single compile error: `IconDiagnosticsTests.swift:35:24: cannot find 'NSURLErrorFailingURLStringKey' in scope` (the final static review had called this symbol fine; it was wrong). Nothing else in the grep output was an error, so the rest of the target compiled as far as the compiler got, but no tests ran. Fix: the test now uses the literal key `"NSErrorFailingURLStringKey"` (the constant's value). Not yet re-run.
+
