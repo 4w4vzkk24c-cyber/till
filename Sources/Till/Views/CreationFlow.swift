@@ -39,7 +39,8 @@ final class CreationFlow {
     /// (addendum A1.1 item 8; cancellation alone is cooperative).
     @ObservationIgnored private var generation = 0
 
-    static let accents = ["#F5A623", "#4FC3F7", "#81C784", "#BA68C8", "#FF8A65", "#FFD54F"]
+    /// Identity colours for new chips, kept out of the state hues (amber and red mean state).
+    static let accents = ["#6FCFFF", "#8FE0A0", "#D2A4FF", "#FF93C9", "#5EE0CF", "#A8B1FF"]
     static let genericHint = "Couldn’t save that. Try again."
 
     init(
