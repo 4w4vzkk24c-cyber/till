@@ -37,7 +37,6 @@ final class IconPickerModel {
     }
 
     func startSearch() {
-        IconLog.note("picker: search submitted")
         searchTask?.cancel()
         searchTask = Task { await self.search() }
     }
@@ -60,7 +59,6 @@ final class IconPickerModel {
             results = found
             highlighted = found.first
             status = found.isEmpty ? .empty : .idle
-            IconLog.note("picker: search finished, \(found.count) results")
         } catch is CancellationError {
             return
         } catch {
@@ -261,17 +259,14 @@ struct IconPreviewCell: View {
             }
         }
         .task(id: result.id) {
-            IconLog.note("preview: start")
             do {
                 let asset = try await provider.fetch(id: result.id)
                 image = NSImage(contentsOf: asset.fileURL)
                 monotone = asset.monotone
-                IconLog.note("preview: ok, image=\(image != nil)")
             } catch is CancellationError {
                 return
             } catch {
                 failed = true
-                IconLog.note("preview: failed")
             }
         }
     }
