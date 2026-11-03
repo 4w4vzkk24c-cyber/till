@@ -82,3 +82,7 @@ New tests: `TickTests` (cadence + loop with injected sleep), `CreationFlowTests`
 6. Closed-popover CPU/wake rate is ~30 s cadence (Activity Monitor / `log`), confirming the popover-open signals do not stick on.
 7. Open-at-login toggle incl. requires-approval flow.
 8. Increase Contrast / Reduce Transparency / light and dark: contrast of red, amber and gray on the card fill.
+
+**Result of Update 3 (operator-reported, `artifacts/test-005`):** `Test run with 108 tests in 11 suites passed after 0.137 seconds`, `** TEST SUCCEEDED **`; the grep for `error:` / `✘` matched only the `com.apple.linkd.autoShortcut` connection log lines (test-host noise, as in earlier runs). This is the first measured full-suite count (108); the earlier "74" figure in this record was an estimate, not a measurement. `xcodebuild` exit status line was not in the pasted output. The tick-loop tests (which poll with `Task.yield`) passed in this run; flakiness across repeated runs is not yet assessed.
+
+**Still unverified (manual checklist above, items 1–8):** nothing about the running UI has been confirmed — menu-bar rendering of amber/red tint and count (R3), popover open/closed signals, real notification delivery and wake catch-up, VoiceOver, contrast, login-item flow.
