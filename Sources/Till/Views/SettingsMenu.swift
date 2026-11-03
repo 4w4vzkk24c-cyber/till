@@ -38,6 +38,7 @@ struct SettingsMenu: View {
                 Text(error)
             }
             Divider()
+            Button("About Till") { AboutPanel.show() }
             Button("Quit Till") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         } label: {

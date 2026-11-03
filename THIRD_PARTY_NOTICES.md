@@ -18,11 +18,12 @@ white so they can be tinted; the shapes are unchanged.
 | `logos:claude-icon`, `logos:openai-icon`, `logos:z-ai`, `logos:opencode-icon`, `logos:ollama` | SVG Logos | Gil Barbara | CC0 1.0 |
 | `fa-solid:seedling` (menu-bar glyph) | Font Awesome 5 Solid | Dave Gandy, Font Awesome | CC BY 4.0 |
 
-- **Attribution needed before shipping.** CC BY 4.0 (Emoji One, Font Awesome) requires credit to
-  the author, and MIT (Hugeicons, with icons, @icons) requires the copyright and permission
-  notice to accompany copies. The repository file alone does not satisfy either for people who
-  only have the app: surface these credits where users can find them (for example an About line
-  and the download page) and include the MIT license texts.
+- **Attribution.** The in-app About panel (gear menu, `About Till`) now credits each set's author
+  and license with a link, which covers CC BY 4.0 (Emoji One, Font Awesome). **Still to add:** the
+  exact MIT copyright and permission notice for Hugeicons, with icons and @icons. The npm data
+  does not include the upstream license files and Hugeicons gives no license link, so the wording
+  must be sourced from each project's LICENSE; until then they are credited by author only.
+  Also surface the credits on the download page.
 - **Company marks.** The Claude, OpenAI, Z.ai, opencode and Ollama logos are trademarks of their
   owners. The SVG Logos collection is CC0 for the artwork, which does not grant any trademark
   rights. Using them here, as icons a person picks to stand for a timer, is the operator's call.
