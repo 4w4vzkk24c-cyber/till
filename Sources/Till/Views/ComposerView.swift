@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The add/edit composer (spec A2): one pill holding the icon tile, the deadline field and
-/// the optional label, the gear beside it, one status line, the time prompt, and the
+/// The add/edit composer (spec A2): one pill holding the icon tile and the deadline field,
+/// the gear beside it, one status line, the time prompt, and the
 /// inline icon picker. Behavior is `CreationFlow`'s; this view only lays it out.
 struct ComposerView: View {
     let store: TimerStore
@@ -34,28 +34,20 @@ struct ComposerView: View {
         let adding = creation.editingID == nil
         return HStack(spacing: Theme.Space.s) {
             if adding { iconTile(theme) }
-            TextField(adding ? "in 20 min, Fri 5pm" : "New deadline (optional)", text: $creation.input)
+            TextField(adding ? "in 20 min, Fri 5pm" : "New deadline", text: $creation.input)
                 .textFieldStyle(.plain)
                 .font(.system(size: 15))
                 .focused(focus)
                 .disabled(creation.phase != .idle)
                 .onSubmit { creation.startSubmit() }
                 .accessibilityLabel("Deadline")
-            TextField("Label", text: $creation.label)
-                .textFieldStyle(.plain)
-                .font(.system(size: 13))
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 110)
-                .disabled(creation.phase != .idle)
-                .onSubmit { creation.startSubmit() }
-                .accessibilityLabel("Label")
         }
         .padding(.leading, adding ? 7 : 14)
         .padding(.trailing, 12)
         .frame(height: 40)
         .background {
             let shape = RoundedRectangle(cornerRadius: Theme.Radius.pill, style: .continuous)
-            shape.fill(theme.tile).overlay(shape.strokeBorder(theme.hairline, lineWidth: 0.5))
+            shape.fill(theme.tile).overlay(shape.strokeBorder(theme.edge, lineWidth: 1))
         }
     }
 
@@ -107,7 +99,7 @@ struct ComposerView: View {
                 .padding(.horizontal, Theme.Space.m)
         case .editing:
             HStack {
-                Text("Editing. Leave the deadline blank to keep it.")
+                Text("Editing. Type a new deadline.")
                     .font(.system(size: 12))
                     .foregroundStyle(theme.ink2)
                 Spacer()

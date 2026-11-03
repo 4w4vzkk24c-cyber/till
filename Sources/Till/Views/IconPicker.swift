@@ -170,7 +170,7 @@ struct IconPickerView: View {
         .padding(8)
         .background {
             let shape = RoundedRectangle(cornerRadius: Theme.Radius.tile, style: .continuous)
-            shape.fill(theme.tile).overlay(shape.strokeBorder(theme.hairline, lineWidth: 0.5))
+            shape.fill(theme.tile).overlay(shape.strokeBorder(theme.edge, lineWidth: 1))
         }
     }
 

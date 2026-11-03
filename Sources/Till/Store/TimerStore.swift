@@ -13,7 +13,6 @@ enum TimerStoreError: Error, Equatable {
 struct NewChip: Sendable {
     let iconId: String
     let iconMonotone: Bool
-    let label: String?
     let accentHex: String
     let parsed: ParsedDeadline
 }
@@ -144,7 +143,7 @@ final class TimerStore {
     func createChip(_ new: NewChip) async throws -> UUID {
         guard new.parsed.deadline > clock() else { throw TimerStoreError.deadlineInPast }
         let entity = ChipEntity(
-            iconId: new.iconId, iconMonotone: new.iconMonotone, label: new.label,
+            iconId: new.iconId, iconMonotone: new.iconMonotone,
             accentHex: new.accentHex, deadline: new.parsed.deadline,
             approachWindow: new.parsed.approachWindow, kind: new.parsed.kind.rawValue,
             createdDate: clock())
@@ -185,24 +184,20 @@ final class TimerStore {
         await scheduleIfPossible(id: id, requestAuthorizationIfNeeded: false)
     }
 
-    /// Edit covers label and deadline only (design §7.5). `deadline == nil` keeps the
-    /// deadline (label-only edit). A paused chip stays paused and a new deadline becomes
-    /// its frozen remaining time measured from now.
-    func edit(id: UUID, label: String?, deadline parsed: ParsedDeadline?) async throws {
+    /// Edit changes the deadline only (chips have no label). A paused chip stays paused and
+    /// the new deadline becomes its frozen remaining time measured from now.
+    func edit(id: UUID, deadline parsed: ParsedDeadline) async throws {
         guard let chip = fetchEntity(id) else { throw TimerStoreError.notFound }
         let now = clock()
-        if let parsed, parsed.deadline <= now { throw TimerStoreError.deadlineInPast }
-        chip.label = label
+        if parsed.deadline <= now { throw TimerStoreError.deadlineInPast }
         let stillPaused = chip.pausedAt != nil
-        if let parsed {
-            chip.deadline = parsed.deadline
-            chip.approachWindow = parsed.approachWindow
-            chip.kind = parsed.kind.rawValue
-            chip.zeroCrossingHandled = false
-            if stillPaused { chip.pausedAt = now }
-        }
+        chip.deadline = parsed.deadline
+        chip.approachWindow = parsed.approachWindow
+        chip.kind = parsed.kind.rawValue
+        chip.zeroCrossingHandled = false
+        if stillPaused { chip.pausedAt = now }
         try commit()
-        // Reschedule so the pending trigger carries the new label and/or deadline.
+        // Reschedule so the pending trigger carries the new deadline.
         scheduler.removePending(ids: [id])
         if !stillPaused {
             await scheduleIfPossible(id: id, requestAuthorizationIfNeeded: false)
@@ -324,9 +319,9 @@ final class TimerStore {
         chip.pausedAt == nil && chip.deadline <= now && !chip.zeroCrossingHandled
     }
 
+    /// Chips have no label (the icon is the subject), so every notification reads the same.
     private func content(for chip: ChipEntity) -> NotificationContent {
-        let trimmed = chip.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return NotificationContent(title: trimmed.isEmpty ? "Timer" : trimmed, body: "Time’s up")
+        NotificationContent(title: "Timer", body: "Time’s up")
     }
 
     // MARK: - Persistence

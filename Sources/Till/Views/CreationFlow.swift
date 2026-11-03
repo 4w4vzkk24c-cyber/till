@@ -16,7 +16,6 @@ final class CreationFlow {
     }
 
     var input = ""
-    var label = ""
     var promptHour = NaturalDeadline.suggestedHour
     var promptMinute = 0
 
@@ -64,11 +63,6 @@ final class CreationFlow {
         errorHint = nil
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Editing with a blank deadline field keeps the deadline (label-only edit).
-        if let id = editingID, text.isEmpty {
-            await run { try await self.store.edit(id: id, label: self.cleanLabel, deadline: nil) }
-            return
-        }
         do {
             let parsed = try NaturalDeadline.parse(
                 text, now: clock(), calendar: calendar, timeZone: timeZone)
@@ -127,10 +121,9 @@ final class CreationFlow {
         pickerOpen = false
     }
 
-    func beginEdit(id: UUID, label: String?) {
+    func beginEdit(id: UUID) {
         reset()
         editingID = id
-        self.label = label ?? ""
     }
 
     /// Runs a chip action (pause, resume, done) and surfaces any failure inline.
@@ -145,18 +138,12 @@ final class CreationFlow {
 
     // MARK: - Internals
 
-    private var cleanLabel: String? {
-        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
     private func commit(_ parsed: ParsedDeadline) async {
         if let id = editingID {
-            await run { try await self.store.edit(id: id, label: self.cleanLabel, deadline: parsed) }
+            await run { try await self.store.edit(id: id, deadline: parsed) }
         } else {
             let gen = generation
             let accent = Self.accents[store.chips.count % Self.accents.count]
-            let label = cleanLabel
             await run {
                 var icon = self.selectedIcon
                 if !icon.isBuiltIn {
@@ -165,7 +152,7 @@ final class CreationFlow {
                 guard gen == self.generation else { throw CancellationError() }
                 return try await self.store.createChip(
                     NewChip(
-                        iconId: icon.id, iconMonotone: icon.monotone, label: label,
+                        iconId: icon.id, iconMonotone: icon.monotone,
                         accentHex: accent, parsed: parsed))
             }
         }
@@ -207,7 +194,6 @@ final class CreationFlow {
 
     private func reset() {
         input = ""
-        label = ""
         phase = .idle
         editingID = nil
         errorHint = nil

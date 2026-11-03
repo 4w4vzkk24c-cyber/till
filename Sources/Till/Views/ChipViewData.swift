@@ -8,7 +8,6 @@ struct ChipViewData: Identifiable, Equatable {
     let id: UUID
     let iconId: String
     let iconMonotone: Bool
-    let label: String?
     let accentHex: String
     let snapshot: ChipSnapshot
 
@@ -16,7 +15,6 @@ struct ChipViewData: Identifiable, Equatable {
         id = entity.id
         iconId = entity.iconId
         iconMonotone = entity.iconMonotone
-        label = entity.label
         accentHex = entity.accentHex
         snapshot = entity.snapshot
     }
@@ -24,7 +22,7 @@ struct ChipViewData: Identifiable, Equatable {
     func state(at now: Date) -> ChipState { DeadlineState.state(of: snapshot, at: now) }
     func heroText(at now: Date) -> String { HeroTime.format(chip: snapshot, at: now) }
     func accessibilityLabel(at now: Date) -> String {
-        Spoken.label(title: label, state: state(at: now), remaining: HeroTime.remaining(of: snapshot, at: now))
+        Spoken.label(state: state(at: now), remaining: HeroTime.remaining(of: snapshot, at: now))
     }
 }
 

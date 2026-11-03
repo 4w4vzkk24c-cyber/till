@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One chip tile (spec A2): icon, hero digits, a full-width control strip, and the label
-/// under it. Fill and outline carry state; the chip's accent
+/// One chip tile (spec A2): icon, hero digits and a full-width control strip. Chips have no
+/// label; the icon is the subject. Fill and outline carry state; the chip's accent
 /// colours its icon only. Static: no animation, state changes swap.
 struct ChipCardView: View {
     let data: ChipViewData
@@ -34,14 +34,6 @@ struct ChipCardView: View {
                 .frame(height: 28)
 
             controlStrip(p, theme)
-
-            // The label sits under the control. Its slot is always reserved so an
-            // unlabeled chip keeps the tile height.
-            Text(data.label ?? "")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(labelColor(p.surface, theme))
-                .lineLimit(1)
-                .frame(height: 14)
         }
         .padding(.top, 8)
         .padding(.horizontal, 6)
@@ -75,7 +67,7 @@ struct ChipCardView: View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.tile, style: .continuous)
         switch surface {
         case .neutral:
-            shape.fill(theme.tile).overlay(shape.strokeBorder(theme.hairline, lineWidth: 0.5))
+            shape.fill(theme.tile).overlay(shape.strokeBorder(theme.edge, lineWidth: 1))
         case .dueSoon:
             shape.fill(scheme == .dark ? Color.black.opacity(0.28) : theme.tile)
                 .overlay(shape.strokeBorder(theme.amber, lineWidth: 2))
@@ -83,14 +75,6 @@ struct ChipCardView: View {
             shape.fill(Theme.overdueFill)
         case .paused:
             shape.strokeBorder(theme.ink3.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-        }
-    }
-
-    private func labelColor(_ s: ChipPresentation.Surface, _ theme: Theme) -> Color {
-        switch s {
-        case .overdue: return .white
-        case .paused: return theme.ink3
-        default: return theme.ink2
         }
     }
 

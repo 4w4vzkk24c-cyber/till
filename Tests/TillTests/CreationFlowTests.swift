@@ -21,14 +21,12 @@ import Testing
     @Test func quickInputCreatesChipAndResets() async throws {
         let (h, f) = try make()
         f.input = "in 20 min"
-        f.label = "  Tea "
         await f.submit()
         #expect(h.store.chips.count == 1)
         let chip = try #require(h.store.chips.first)
-        #expect(chip.label == "Tea")
         #expect(chip.deadline == h.clock.now.addingTimeInterval(1200))
         #expect(chip.iconId == FallbackIcons.defaultID)
-        #expect(f.input == "" && f.label == "")
+        #expect(f.input == "")
         #expect(f.errorHint == nil)
         #expect(f.phase == .idle)
     }
@@ -97,24 +95,22 @@ import Testing
         #expect(h.store.chips.isEmpty)
     }
 
-    @Test func editWithBlankDeadlineChangesOnlyTheLabel() async throws {
+    @Test func blankDeadlineWhileEditingShowsTheEmptyHintAndStaysEditing() async throws {
         let (h, f) = try make()
-        let id = try await h.create(in: 3600, label: "Old")
+        let id = try await h.create(in: 3600)
         let deadline = h.chip(id)?.deadline
-        f.beginEdit(id: id, label: "Old")
+        f.beginEdit(id: id)
         #expect(f.editingID == id)
-        #expect(f.label == "Old")
-        f.label = "New"
         await f.submit()
-        #expect(h.chip(id)?.label == "New")
+        #expect(f.errorHint == NaturalDeadlineError.empty.hint)
+        #expect(f.editingID == id)
         #expect(h.chip(id)?.deadline == deadline)
-        #expect(f.editingID == nil)
     }
 
     @Test func editWithNewDeadlineReplacesIt() async throws {
         let (h, f) = try make()
-        let id = try await h.create(in: 3600, label: "Old")
-        f.beginEdit(id: id, label: "Old")
+        let id = try await h.create(in: 3600)
+        f.beginEdit(id: id)
         f.input = "in 2 hours"
         await f.submit()
         #expect(h.chip(id)?.deadline == h.clock.now.addingTimeInterval(7200))
@@ -124,9 +120,9 @@ import Testing
     @Test func editingAChipThatWasFinishedReportsIt() async throws {
         let (h, f) = try make()
         let id = try await h.create(in: 3600)
-        f.beginEdit(id: id, label: nil)
+        f.beginEdit(id: id)
         try h.store.markDone(id: id)
-        f.label = "x"
+        f.input = "in 2 hours"
         await f.submit()
         #expect(f.errorHint == "That timer no longer exists.")
         #expect(f.editingID == nil)

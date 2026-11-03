@@ -23,9 +23,9 @@ enum Spoken {
         return unit(total, "second")
     }
 
-    static func label(title: String?, state: ChipState, remaining: TimeInterval) -> String {
-        let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let name = trimmed.isEmpty ? "Timer" : trimmed
+    /// Chips have no label, so every chip is spoken as "Timer" (operator decision).
+    static func label(state: ChipState, remaining: TimeInterval) -> String {
+        let name = "Timer"
         switch state {
         case .overdue:
             let over = Int((-remaining).rounded(.down))

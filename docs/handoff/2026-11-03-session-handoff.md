@@ -206,3 +206,5 @@ tail -60 artifacts/diag-001/native-log.txt
 
 The `launch` category line shows which test-host signal fired (hypothesis H1). Unified logs have bounded retention, so an empty capture is not proof that nothing failed; say so if it is empty.
 - Next artifacts directory: `artifacts/test-015` (last used on the Mac: test-014; the capture script refuses to overwrite).
+- Operator removed the label feature entirely (stored model is now schema v2 with a migration plan; chips read `Timer`), then asked for a glassier look (tokens only). Both unbuilt as of this addendum; see evidence Updates 11 and 12.
+

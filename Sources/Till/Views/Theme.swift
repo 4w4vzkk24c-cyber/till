@@ -17,10 +17,17 @@ struct Theme {
     private var increased: Bool { contrast == .increased }
 
     var tile: Color {
-        isDark ? Color.white.opacity(increased ? 0.18 : 0.10) : Color.black.opacity(increased ? 0.12 : 0.06)
+        isDark ? Color.white.opacity(increased ? 0.18 : 0.08) : Color.black.opacity(increased ? 0.12 : 0.05)
     }
     var hairline: Color {
         isDark ? Color.white.opacity(increased ? 0.32 : 0.16) : Color.black.opacity(increased ? 0.24 : 0.12)
+    }
+    /// Glass edge: a bright top rim fading to a faint bottom one, drawn as a 1 pt border on
+    /// tiles, the composer pill and the picker. Stronger under Increase Contrast.
+    var edge: LinearGradient {
+        let top = isDark ? Color.white.opacity(increased ? 0.6 : 0.38) : Color.white.opacity(0.95)
+        let bottom = isDark ? Color.white.opacity(increased ? 0.22 : 0.07) : Color.black.opacity(increased ? 0.22 : 0.08)
+        return LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
     }
     // Light appearance is derived from system label colours, not mocked (spec A2).
     var ink: Color { isDark ? .white : Color(nsColor: .labelColor) }
@@ -40,7 +47,7 @@ struct Theme {
     /// guesses to tune on the Mac. Reduce Transparency swaps it for an opaque colour.
     func trayTint(reduceTransparency: Bool) -> Color {
         if reduceTransparency { return Color(hex: isDark ? "#1E3260" : "#E6ECF7") }
-        return isDark ? Color(hex: "#1E3260").opacity(0.45) : Color(hex: "#7FA6E8").opacity(0.10)
+        return isDark ? Color(hex: "#1E3260").opacity(0.24) : Color(hex: "#7FA6E8").opacity(0.06)
     }
 
     static let overdueFill = Color(hex: "#CF2F36")

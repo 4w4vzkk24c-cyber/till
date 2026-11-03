@@ -44,15 +44,12 @@ import Testing
     }
 
     @Test func labelsCarryState() {
-        #expect(Spoken.label(title: "Dentist", state: .approaching, remaining: 3 * 3_600 + 12 * 60)
-                == "Dentist, 3 hours 12 minutes remaining, approaching")
-        #expect(Spoken.label(title: nil, state: .clean, remaining: 7_200) == "Timer, 2 hours remaining")
-        #expect(Spoken.label(title: "  ", state: .paused, remaining: 600)
-                == "Timer, paused, 10 minutes remaining")
-        #expect(Spoken.label(title: "Tea", state: .overdue, remaining: -(2 * 3_600 + 5))
-                == "Tea, 2 hours overdue")
-        #expect(Spoken.label(title: "Tea", state: .overdue, remaining: -10)
-                == "Tea, less than a minute overdue")
+        #expect(Spoken.label(state: .approaching, remaining: 3 * 3_600 + 12 * 60)
+                == "Timer, 3 hours 12 minutes remaining, approaching")
+        #expect(Spoken.label(state: .clean, remaining: 7_200) == "Timer, 2 hours remaining")
+        #expect(Spoken.label(state: .paused, remaining: 600) == "Timer, paused, 10 minutes remaining")
+        #expect(Spoken.label(state: .overdue, remaining: -(2 * 3_600 + 5)) == "Timer, 2 hours overdue")
+        #expect(Spoken.label(state: .overdue, remaining: -10) == "Timer, less than a minute overdue")
     }
 }
 

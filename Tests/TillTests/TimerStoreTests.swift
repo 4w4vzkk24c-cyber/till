@@ -48,10 +48,10 @@ struct Harness {
     }
 
     @discardableResult
-    func create(in seconds: TimeInterval, label: String? = "Test") async throws -> UUID {
+    func create(in seconds: TimeInterval) async throws -> UUID {
         try await store.createChip(
             NewChip(
-                iconId: "mdi:timer", iconMonotone: true, label: label,
+                iconId: "mdi:timer", iconMonotone: true,
                 accentHex: "#FFAA00", parsed: parsed(in: seconds)))
     }
 
@@ -65,10 +65,10 @@ struct Harness {
 
     @Test func createPersistsAndSchedules() async throws {
         let h = try Harness()
-        let id = try await h.create(in: 3600, label: "Dentist")
+        let id = try await h.create(in: 3600)
         #expect(h.store.chips.count == 1)
         let chip = try #require(h.chip(id))
-        #expect(chip.label == "Dentist")
+        #expect(h.scheduler.scheduled.first?.title == "Timer")    // no labels: one name for every chip
         #expect(chip.deadline == h.clock.now.addingTimeInterval(3600))
         #expect(chip.zeroCrossingHandled == false)   // not set at scheduling (FEAS-01)
         #expect(h.scheduler.scheduled.count == 1)
@@ -130,13 +130,13 @@ struct Harness {
 
     @Test func reloadFromSameContainer() async throws {
         let h = try Harness()
-        let id = try await h.create(in: 3600, label: "Keep")
+        let id = try await h.create(in: 3600)
         let second = TimerStore(
             container: h.container, scheduler: MockScheduler(), defaults: h.defaults,
             clock: { h.clock.now })
         try await second.start()
         #expect(second.chips.map(\.id) == [id])
-        #expect(second.chips.first?.label == "Keep")
+        #expect(second.chips.first?.iconId == "mdi:timer")
     }
 
     @Test func onDiskRoundTripAcrossContainers() async throws {
@@ -149,12 +149,12 @@ struct Harness {
         let id: UUID
         do {
             let h = try Harness(container: TillPersistence.makeContainer(inMemory: false, storeURL: url))
-            id = try await h.create(in: 3600, label: "Disk")
+            id = try await h.create(in: 3600)
         }
         let reopened = try Harness(container: TillPersistence.makeContainer(inMemory: false, storeURL: url))
         try await reopened.store.start()
         #expect(reopened.store.chips.map(\.id) == [id])
-        #expect(reopened.store.chips.first?.label == "Disk")
+        #expect(reopened.store.chips.first?.iconId == "mdi:timer")
     }
 
     /// Regression: the store must keep its container alive. `makeStoreOnly` drops every
@@ -172,7 +172,7 @@ struct Harness {
         try await store.start()
         let id = try await store.createChip(
             NewChip(
-                iconId: "sf:timer", iconMonotone: true, label: nil, accentHex: "#F5A623",
+                iconId: "sf:timer", iconMonotone: true, accentHex: "#F5A623",
                 parsed: ParsedDeadline(
                     deadline: clock.now.addingTimeInterval(600), approachWindow: 1800,
                     kind: .quick, timePromptRequired: false)))
@@ -258,25 +258,24 @@ struct Harness {
         #expect(h.chip(id)?.pausedAt == nil)
     }
 
-    @Test func editReplacesLabelAndDeadlineAndReschedules() async throws {
+    @Test func editReplacesDeadlineAndReschedules() async throws {
         let h = try Harness()
-        let id = try await h.create(in: 3600, label: "Old")
+        let id = try await h.create(in: 3600)
         try h.store.handleDeliveryObserved(chipID: id)
-        try await h.store.edit(id: id, label: "New", deadline: h.parsed(in: 7200))
+        try await h.store.edit(id: id, deadline: h.parsed(in: 7200))
         let chip = try #require(h.chip(id))
-        #expect(chip.label == "New")
         #expect(chip.deadline == h.clock.now.addingTimeInterval(7200))
         #expect(chip.zeroCrossingHandled == false)
         #expect(h.scheduler.removed.contains(id))
         #expect(h.scheduler.scheduled.count == 2)
-        #expect(h.scheduler.scheduled.last?.title == "New")
+        #expect(h.scheduler.scheduled.last?.title == "Timer")
     }
 
     @Test func editingPausedChipKeepsItPaused() async throws {
         let h = try Harness()
         let id = try await h.create(in: 3600)
         try h.store.pause(id: id)
-        try await h.store.edit(id: id, label: nil, deadline: h.parsed(in: 900))
+        try await h.store.edit(id: id, deadline: h.parsed(in: 900))
         let chip = try #require(h.chip(id))
         #expect(chip.pausedAt == h.clock.now)
         #expect(chip.deadline == h.clock.now.addingTimeInterval(900))
@@ -421,7 +420,7 @@ struct Harness {
         h.clock.now = h.clock.now.addingTimeInterval(150)   // both overdue
         // Mid-pass, the user moves b's deadline into the future: it must not be notified.
         h.scheduler.onPendingRead = {
-            try? await h.store.edit(id: b, label: nil, deadline: h.parsed(in: 3600))
+            try? await h.store.edit(id: b, deadline: h.parsed(in: 3600))
         }
         await h.store.reconcile()
         #expect(h.scheduler.fired == [a])

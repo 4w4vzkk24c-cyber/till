@@ -67,7 +67,7 @@ struct ChipsPopover: View {
                             data: item, now: store.now,
                             onPauseResume: { pauseOrResume(item) },
                             onDone: { done(item) },
-                            onEdit: { creation.beginEdit(id: item.id, label: item.label) })
+                            onEdit: { creation.beginEdit(id: item.id) })
                     }
                 }
             }

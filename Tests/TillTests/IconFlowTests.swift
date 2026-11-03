@@ -93,11 +93,11 @@ import Testing
     @Test func editModeNeverFetches() async throws {
         let icons = MockIcons()
         let (h, f) = try make(icons)
-        let id = try await h.create(in: 3600, label: "Old")
-        f.beginEdit(id: id, label: "Old")
-        f.label = "New"
+        let id = try await h.create(in: 3600)
+        f.beginEdit(id: id)
+        f.input = "in 2 hours"
         await f.submit()
-        #expect(h.chip(id)?.label == "New")
+        #expect(h.chip(id)?.deadline == h.clock.now.addingTimeInterval(7200))
         #expect(icons.fetched.isEmpty)
     }
 }
