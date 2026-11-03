@@ -36,6 +36,13 @@ struct Theme {
         Color(hex: HexColor.adjusted(hex, forLight: !isDark, minContrast: 3.0))
     }
 
+    /// Blue-ish tint laid over the system window material (spec A2). Strengths are first
+    /// guesses to tune on the Mac. Reduce Transparency swaps it for an opaque colour.
+    func trayTint(reduceTransparency: Bool) -> Color {
+        if reduceTransparency { return Color(hex: isDark ? "#1E3260" : "#E6ECF7") }
+        return isDark ? Color(hex: "#1E3260").opacity(0.45) : Color(hex: "#7FA6E8").opacity(0.10)
+    }
+
     static let overdueFill = Color(hex: "#CF2F36")
 
     enum Radius {

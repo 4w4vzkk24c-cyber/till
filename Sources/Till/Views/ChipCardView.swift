@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// One chip card, per design §4: icon, caption label (gray), hero time (rounded,
-/// monospaced digits), minimal pause control. Static: no animation, state changes swap.
+/// One chip tile (spec A2): icon, label, hero digits, a caption that says the state in
+/// words, and a full-width control strip. Fill and outline carry state; the chip's accent
+/// colours its icon only. Static: no animation, state changes swap.
 struct ChipCardView: View {
     let data: ChipViewData
     let now: Date
@@ -9,38 +10,51 @@ struct ChipCardView: View {
     let onDone: () -> Void
     let onEdit: () -> Void
 
-    private static let cardFill = Color(red: 0.17, green: 0.16, blue: 0.15)
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         let state = data.state(at: now)
-        let accent = Color(hex: data.accentHex)
+        let theme = Theme(scheme, contrast)
+        let p = ChipPresentation(state: state, heroText: data.heroText(at: now))
+        let overdue = p.surface == .overdue
 
-        VStack(spacing: 6) {
+        VStack(spacing: 2) {
             ChipIconView(
                 iconId: data.iconId, monotone: data.iconMonotone,
-                tint: state == .paused ? accent.opacity(0.4) : accent)
-                .frame(width: 44, height: 44)
-                .padding(.top, 14)
+                tint: overdue ? .white : theme.accent(data.accentHex))
+                .frame(width: 40, height: 40)
+                .opacity(p.surface == .paused ? 0.5 : 1)
+                .padding(.bottom, 2)
 
-            if let label = data.label, !label.isEmpty {
-                Text(label)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+            // The label slot is always reserved so an unlabeled chip keeps the tile height.
+            Text(data.label ?? "")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(labelColor(p.surface, theme))
+                .lineLimit(1)
+                .frame(height: 16)
 
-            Text(data.heroText(at: now))
-                .font(.system(size: 26, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(heroColor(state, accent: accent))
+            Text(p.hero)
+                .font(.system(size: 26, weight: .bold, design: .monospaced))
+                .foregroundStyle(heroColor(p.surface, theme))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+                .frame(height: 28)
 
-            control(state)
-                .padding(.bottom, 10)
+            Text(p.caption ?? " ")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(captionColor(p.surface, theme))
+                .frame(height: 14)
+
+            Spacer(minLength: 0)
+            controlStrip(p, theme)
         }
+        .padding(.top, 10)
+        .padding(.horizontal, 6)
+        .padding(.bottom, 6)
         .frame(maxWidth: .infinity)
-        .background(Self.cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .frame(height: 152)
+        .background { surface(p.surface, theme) }
         .contextMenu {
             Button("Edit", action: onEdit)
             if state == .paused {
@@ -60,34 +74,81 @@ struct ChipCardView: View {
         }
     }
 
+    // MARK: - Surface
+
     @ViewBuilder
-    private func control(_ state: ChipState) -> some View {
-        if state == .overdue {
-            // Done is the only exit from Overdue (settled #3), so it is visible, not buried.
-            Button(action: onDone) {
-                Label("Done", systemImage: "checkmark")
-                    .labelStyle(.titleAndIcon)
-                    .font(.caption)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-        } else {
-            Button(action: onPauseResume) {
-                Image(systemName: state == .paused ? "play.fill" : "pause.fill")
-                    .font(.caption)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .help(state == .paused ? "Resume" : "Pause")
+    private func surface(_ surface: ChipPresentation.Surface, _ theme: Theme) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.tile, style: .continuous)
+        switch surface {
+        case .neutral:
+            shape.fill(theme.tile).overlay(shape.strokeBorder(theme.hairline, lineWidth: 0.5))
+        case .dueSoon:
+            shape.fill(scheme == .dark ? Color.black.opacity(0.28) : theme.tile)
+                .overlay(shape.strokeBorder(theme.amber, lineWidth: 2))
+        case .overdue:
+            shape.fill(Theme.overdueFill)
+        case .paused:
+            shape.strokeBorder(theme.ink3.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
         }
     }
 
-    private func heroColor(_ state: ChipState, accent: Color) -> Color {
-        switch state {
-        case .clean: return Color.white.opacity(0.9)
-        case .approaching: return accent
-        case .overdue: return .red
-        case .paused: return Color.white.opacity(0.4)
+    private func labelColor(_ s: ChipPresentation.Surface, _ theme: Theme) -> Color {
+        switch s {
+        case .overdue: return .white
+        case .paused: return theme.ink3
+        default: return theme.ink2
+        }
+    }
+
+    private func heroColor(_ s: ChipPresentation.Surface, _ theme: Theme) -> Color {
+        switch s {
+        case .neutral: return theme.ink
+        case .dueSoon: return theme.amber
+        case .overdue: return .white
+        case .paused: return theme.ink2
+        }
+    }
+
+    private func captionColor(_ s: ChipPresentation.Surface, _ theme: Theme) -> Color {
+        switch s {
+        case .neutral: return .clear
+        case .dueSoon: return theme.amber
+        case .overdue: return .white
+        case .paused: return theme.ink3
+        }
+    }
+
+    // MARK: - Control
+
+    /// Pause / resume, or Done on an overdue tile (Done is the only exit from Overdue,
+    /// settled #3, so it replaces pause and is visible, not buried). A real Button, so it
+    /// is keyboard-focusable; the whole strip is the hit target.
+    private func controlStrip(_ p: ChipPresentation, _ theme: Theme) -> some View {
+        Button(action: p.control == .done ? onDone : onPauseResume) {
+            Group {
+                switch p.control {
+                case .pause: Image(systemName: "pause.fill").font(.system(size: 13))
+                case .resume: Image(systemName: "play.fill").font(.system(size: 13))
+                case .done: Text("Done").font(.system(size: 13, weight: .semibold))
+                }
+            }
+            .foregroundStyle(p.control == .done ? Color.white : theme.ink)
+            .frame(maxWidth: .infinity)
+            .frame(height: 28)
+            .background(
+                p.control == .done ? Color.black.opacity(0.28) : Color.clear,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(helpText(p.control))
+    }
+
+    private func helpText(_ control: ChipPresentation.Control) -> String {
+        switch control {
+        case .pause: return "Pause"
+        case .resume: return "Resume"
+        case .done: return "Mark done"
         }
     }
 }

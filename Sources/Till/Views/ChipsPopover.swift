@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// The MenuBarExtra window content (design §4, §7.5): header with the add field, a
-/// two-column grid of chips, and a footer with settings and Quit. No secondary windows,
-/// no animation.
+/// The MenuBarExtra window content (design §4, §7.5; spec A2): the composer on top, a
+/// two-column grid of chips below, the gear menu beside the composer. No secondary
+/// windows, no animation.
 struct ChipsPopover: View {
     let store: TimerStore
     @Bindable var creation: CreationFlow
@@ -12,26 +12,32 @@ struct ChipsPopover: View {
     let loadError: String?
 
     @FocusState private var addFieldFocused: Bool
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private let columns = [
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: Theme.Space.s),
+        GridItem(.flexible(), spacing: Theme.Space.s),
     ]
+    private static let examples = ["in 20 min", "Fri 5pm", "Nov 15"]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let theme = Theme(scheme, contrast)
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
             if let loadError {
                 Text(loadError)
                     .font(.caption)
                     .foregroundStyle(.red)
             }
-            header
-            chipsGrid
-            Divider()
-            footer
+            ComposerView(
+                store: store, creation: creation, loginItems: loginItems,
+                picker: picker, focus: $addFieldFocused)
+            chipsGrid(theme)
         }
-        .padding(14)
+        .padding(Theme.Space.pad)
         .frame(width: 340)
+        .background { theme.trayTint(reduceTransparency: reduceTransparency) }
         .transaction { $0.animation = nil }          // static swaps only (settled)
         .onAppear {
             store.popoverOpen = true
@@ -46,126 +52,16 @@ struct ChipsPopover: View {
         }
     }
 
-    // MARK: - Header
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if creation.editingID != nil {
-                HStack {
-                    Text("Editing — leave the deadline blank to keep it")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Cancel") { creation.cancel() }
-                        .buttonStyle(.plain)
-                        .font(.caption)
-                }
-            }
-
-            TextField(
-                creation.editingID == nil ? "in 20 min · Fri 5pm · Nov 15" : "New deadline (optional)",
-                text: $creation.input
-            )
-            .textFieldStyle(.roundedBorder)
-            .focused($addFieldFocused)
-            .disabled(creation.phase != .idle)
-            .onSubmit { creation.startSubmit() }
-            .accessibilityLabel("Deadline")
-
-            TextField("Label (optional)", text: $creation.label)
-                .textFieldStyle(.roundedBorder)
-                .disabled(creation.phase != .idle)
-                .onSubmit { creation.startSubmit() }
-                .accessibilityLabel("Label")
-
-            if creation.editingID == nil {
-                iconRow
-                if creation.pickerOpen, let picker {
-                    IconPickerView(model: picker, creation: creation)
-                }
-            }
-
-            if creation.isFetchingIcon {
-                // Static caption, no spinner: no animation anywhere (design §4, §5).
-                Text("Fetching icon…")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if case .awaitingTime = creation.phase {
-                HStack {
-                    Text("At what time?")
-                        .font(.caption)
-                    DatePicker("Time", selection: promptTime, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                    Button("Set") { Task { await creation.confirmTime() } }
-                        .keyboardShortcut(.defaultAction)
-                    Button("Cancel") { creation.cancel() }
-                }
-            }
-
-            if let hint = creation.errorHint {
-                Text(hint)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .accessibilityLabel("Error: \(hint)")
-            }
-        }
-    }
-
-    private var iconRow: some View {
-        HStack(spacing: 8) {
-            Button {
-                if picker != nil { creation.pickerOpen.toggle() }
-            } label: {
-                HStack(spacing: 6) {
-                    ChipIconView(
-                        iconId: creation.selectedIcon.id, monotone: creation.selectedIcon.monotone,
-                        tint: .primary)
-                        .frame(width: 20, height: 20)
-                    Text(picker == nil ? "Built-in icon" : "Icon")
-                        .font(.caption)
-                }
-            }
-            .buttonStyle(.plain)
-            .disabled(picker == nil || creation.phase != .idle)
-            .accessibilityLabel("Choose icon")
-            Text(IconPickerModel.disclosure(for: creation.selectedIcon))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Spacer()
-        }
-    }
-
-    private var promptTime: Binding<Date> {
-        Binding(
-            get: {
-                Calendar.current.date(
-                    bySettingHour: creation.promptHour, minute: creation.promptMinute,
-                    second: 0, of: Date()) ?? Date()
-            },
-            set: { newValue in
-                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
-                creation.promptHour = parts.hour ?? NaturalDeadline.suggestedHour
-                creation.promptMinute = parts.minute ?? 0
-            })
-    }
-
     // MARK: - Chips
 
     @ViewBuilder
-    private var chipsGrid: some View {
+    private func chipsGrid(_ theme: Theme) -> some View {
         let items = store.chips.map(ChipViewData.init)
         if items.isEmpty {
-            Text("No timers. Type a deadline above.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 20)
+            emptyState(theme)
         } else {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 10) {
+                LazyVGrid(columns: columns, spacing: Theme.Space.s) {
                     ForEach(items) { item in
                         ChipCardView(
                             data: item, now: store.now,
@@ -175,8 +71,46 @@ struct ChipsPopover: View {
                     }
                 }
             }
-            .frame(maxHeight: 420)
+            .frame(maxHeight: 470)
         }
+    }
+
+    /// An invitation, not an apology: the examples are the parser's real inputs and fill
+    /// the field when pressed.
+    private func emptyState(_ theme: Theme) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: "timer")
+                .font(.system(size: 40))
+                .foregroundStyle(theme.ink3)
+                .padding(.bottom, 4)
+                .accessibilityHidden(true)
+            Text("Nothing counting down")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(theme.ink)
+            Text("Type when it’s due. Till tells you when time’s up.")
+                .font(.system(size: 13))
+                .foregroundStyle(theme.ink2)
+                .multilineTextAlignment(.center)
+            HStack(spacing: Theme.Space.s) {
+                ForEach(Self.examples, id: \.self) { example in
+                    Button {
+                        creation.input = example
+                        addFieldFocused = true
+                    } label: {
+                        Text(example)
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .foregroundStyle(theme.ink)
+                            .padding(.horizontal, Theme.Space.m)
+                            .padding(.vertical, Theme.Space.s)
+                            .background(theme.tile, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.top, Theme.Space.m)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
     }
 
     private func pauseOrResume(_ item: ChipViewData) {
@@ -193,58 +127,5 @@ struct ChipsPopover: View {
 
     private func done(_ item: ChipViewData) {
         Task { await creation.perform { try store.markDone(id: item.id) } }
-    }
-
-    // MARK: - Footer (settings row + Quit; no secondary windows)
-
-    private var footer: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Toggle("Notifications", isOn: notificationsBinding)
-                .disabled(store.authorization == .denied)
-            if store.authorization == .denied {
-                HStack(spacing: 4) {
-                    Text("Notifications are turned off for Till in System Settings.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Link(
-                        "Open",
-                        destination: URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
-                        .font(.caption)
-                }
-            }
-
-            Toggle("Open at login", isOn: loginBinding)
-            if loginItems.needsApproval {
-                HStack(spacing: 4) {
-                    Text("Approve Till in Login Items.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Button("Open") { loginItems.openSystemSettings() }
-                        .buttonStyle(.link)
-                        .font(.caption)
-                }
-            }
-            if let error = loginItems.errorText {
-                Text(error).font(.caption).foregroundStyle(.red)
-            }
-
-            HStack {
-                Spacer()
-                Button("Quit Till") { NSApplication.shared.terminate(nil) }
-                    .keyboardShortcut("q")
-            }
-        }
-    }
-
-    private var notificationsBinding: Binding<Bool> {
-        Binding(
-            get: { store.notificationsEnabled },
-            set: { value in Task { await store.setNotificationsEnabled(value) } })
-    }
-
-    private var loginBinding: Binding<Bool> {
-        Binding(
-            get: { loginItems.isOn },
-            set: { loginItems.setEnabled($0) })
     }
 }
