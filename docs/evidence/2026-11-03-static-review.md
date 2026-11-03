@@ -128,3 +128,5 @@ Static review only: the cloud container has no Swift toolchain, so nothing below
 **UNVERIFIED on the Mac:** window corner radius vs `Theme.Radius.tile`; tray tint strength over the macOS 26 window material; light appearance (derived, never mocked); Reduce Transparency; Increase Contrast; Reduce Motion (no animation exists); VoiceOver and keyboard-only operation (Tab order across pill, gear and tiles; Esc on the time prompt); gear badge behaviour; every manual checklist item below.
 
 **Operator run (test-010) and manual checklist:** see the plan, Task 8. Record the full `Test run with N tests` line and exit status here once pasted.
+
+**Diagnostics capture:** use the bounded form in the handoff addendum (`log show --info --debug`, raw output and exit status kept under `artifacts/diag-001/`). Bounded retention means an empty capture is not evidence that nothing failed. `xclog` does not apply to this native Mac app.

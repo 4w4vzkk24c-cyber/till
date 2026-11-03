@@ -110,7 +110,7 @@ In `IconProviderTests.swift` change the two `IconError.network` expectations tha
 
 - [ ] **Step 4: Run tests** (operator). Expected: `** TEST SUCCEEDED **` and a `Test run with N tests … passed` line; record N in the evidence file (no earlier count is trustworthy beyond "succeeded").
 
-- [ ] **Step 5: Commit and push**, then ask the operator for the live diagnostics: relaunch the app, search `coffee` once, then paste `/usr/bin/log show --last 3m --style compact --predicate 'subsystem == "com.crossedkeys.till"'`, the label of the icon row, and which on-screen state appeared (handoff §7.1/§7.3).
+- [ ] **Step 5: Commit and push**, then ask the operator for the live diagnostics: relaunch the app, search `coffee` once, then run the bounded capture in the handoff addendum (`--info --debug`, saved to `artifacts/diag-001/`, exit status recorded) and paste its tail, the label of the icon row, and which on-screen state appeared (handoff §7.1/§7.3).
 
 ```bash
 git add Sources/Till/Icons Sources/Till/AppModel.swift Tests/TillTests

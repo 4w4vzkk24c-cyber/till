@@ -194,5 +194,15 @@ Harmless log noise in every run: `com.apple.linkd.autoShortcut` connection error
 ## Addendum (later in the 2026-11-03 sessions)
 - Branch of record is now `claude/peaceful-hawking-avdm1c` (it fast-forwarded to the zealous-einstein history, then continued).
 - Popover rework is **approved** (spec `docs/designs/2026-11-03-popover-rework.md`, mock `docs/designs/assets/`) and implemented **unbuilt** per `docs/superpowers/plans/2026-11-03-popover-rework.md`, except Task 6 (picker rework), which waits on the Iconify diagnostics in section 7.3.
-- Section 7.4's "always" item is done in code: typed errors and `os.Logger` (`subsystem == "com.crossedkeys.till"`). To diagnose: relaunch, search once, then `/usr/bin/log show --last 3m --style compact --predicate 'subsystem == "com.crossedkeys.till"'`. The `launch` category line shows which test-host signal fired (hypothesis H1).
+- Section 7.4's "always" item is done in code: typed errors and `os.Logger` (`subsystem == "com.crossedkeys.till"`). To diagnose: relaunch the app, search `coffee` once, then capture a bounded window to a private artifacts directory (the diagnostics reference's form: `--info --debug`, raw output kept, exit status recorded):
+
+```bash
+mkdir -p artifacts/diag-001 && /usr/bin/log show --last 5m --style compact --info --debug --predicate 'subsystem == "com.crossedkeys.till"' > artifacts/diag-001/native-log.txt 2> artifacts/diag-001/native-log-errors.txt; echo "exit $?" | tee artifacts/diag-001/status.txt
+```
+
+```bash
+tail -60 artifacts/diag-001/native-log.txt
+```
+
+The `launch` category line shows which test-host signal fired (hypothesis H1). Unified logs have bounded retention, so an empty capture is not proof that nothing failed; say so if it is empty.
 - Next artifacts directory: `artifacts/test-010`.
