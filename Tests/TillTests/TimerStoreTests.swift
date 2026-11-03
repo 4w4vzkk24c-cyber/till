@@ -68,13 +68,12 @@ struct Harness {
         let id = try await h.create(in: 3600)
         #expect(h.store.chips.count == 1)
         let chip = try #require(h.chip(id))
-        #expect(h.scheduler.scheduled.first?.title == "Timer")    // no labels: one name for every chip
         #expect(chip.deadline == h.clock.now.addingTimeInterval(3600))
         #expect(chip.zeroCrossingHandled == false)   // not set at scheduling (FEAS-01)
         #expect(h.scheduler.scheduled.count == 1)
         #expect(h.scheduler.scheduled[0].id == id)
         #expect(h.scheduler.scheduled[0].date == chip.deadline)
-        #expect(h.scheduler.scheduled[0].title == "Dentist")
+        #expect(h.scheduler.scheduled[0].title == "Timer")     // no labels: one name for every chip
     }
 
     @Test func createRejectsPastDeadline() async throws {

@@ -174,3 +174,5 @@ Plan `/root/.claude/plans/remove-the-label-feature-hazy-hickey.md` (approved). T
 ## Update 12 — Glassier (operator request, UNBUILT, NOT RUN)
 Tokens only (spec "Glass pass"): lighter tray tint, clearer tile fill, 1 pt glass edge gradient on tiles, pill and picker. UNVERIFIED: how it looks on the Mac, and legibility of the white digits over bright wallpapers now that the tray is more see-through.
 
+**Result of Updates 11 and 12, run `artifacts/test-018` (operator-reported, MEASURED):** `xcodebuild exit: 65`; `Test run with 210 tests in 29 suites failed after 0.173 seconds with 1 issue`; `** TEST FAILED **`. The single failure was `TimerStoreTests.createPersistsAndSchedules()` at line 77: `Expectation failed: h.scheduler.scheduled[0].title == "Dentist"`. Cause: a stale assertion left over from before labels were removed (my read of that region stopped two lines short). The whole target compiled, including the new `MigrationTests`, which is not among the failures. Fix: the assertion now expects `"Timer"`. Not yet re-run. Runs `test-015` to `test-017` were not pasted.
+
