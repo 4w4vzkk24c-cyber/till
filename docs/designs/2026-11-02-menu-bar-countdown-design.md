@@ -1,8 +1,8 @@
 # Till — menu bar countdown monitor
 
-**Date:** 2026-11-02 (gate-eligible r1, formalized same day) · **Status:** Gate-eligible design — ready for spec pass
+**Date:** 2026-11-02 (r1 formalized; r2 revised same day) · **Status:** Design r2 — round-1 critic findings (request-changes) addressed; ready for re-critique
 **Owner:** Zane Robinson · **Lane:** `cofounder-macos-development` · **Ship as:** Crossed Keys Co.
-**Card:** 1859 · **Provenance:** formalized from the operator-approved seed @ `1cc1b28` (idea `4a3ed107`); the ten settled decisions and the chip UI form are unchanged. Deltas from the seed are listed in §12 and reasoned inline.
+**Card:** 1859 · **Provenance:** formalized from the operator-approved seed @ `1cc1b28` (idea `4a3ed107`); the ten settled decisions and the chip UI form are unchanged. Deltas from the seed are listed in §12 and reasoned inline. **r2 folds in:** two operator decisions (palette icons untinted; date-only deadlines prompt for a time — both approved 2026-11-02 18:32), two parent directives (icon change = delete-and-recreate; tick cadence reverted to the seed verbatim), and all six round-1 critic findings (FEAS-01, FR-01, CON-01, AMB-01, SUF-01, FEAS-02).
 
 Evidence labels: **MEASURED** = probed on this host or against the live service on 2026-11-02/03. **READ** = read from the cited primary documentation, not executed. Unlabeled platform facts are design decisions.
 
@@ -14,7 +14,7 @@ Evidence labels: **MEASURED** = probed on this host or against the live service 
 - Swift 6 strict concurrency: one main-actor mutable owner (`TimerStore`); every unit below is either pure or main-actor-isolated; nothing global.
 - Zero third-party runtime dependencies (mac-lane default: Apple frameworks + vendored/pinned assets only). No SPM packages, no backend, no accounts, no always-on server.
 - **No network calls after chip creation.** Icon fetch + render happens once, at creation; everything after is local. This is a settled invariant and a testable one.
-- Swift 6, SwiftUI throughout. No AppKit *UI* bridging. Two deliberate AppKit touches remain, both data/event APIs rather than UI: `NSImage` (the only image type SwiftUI on macOS can hold as a template asset) and `NSWorkspace.didWakeNotification` for wake detection (Swift-concurrency form: `NSWorkspace.DidWakeMessage`) — **READ**, Apple docs, macOS.
+- Swift 6, SwiftUI throughout. No AppKit *UI* bridging. Three deliberate AppKit touches remain (r2 adds the third), all data/event APIs rather than UI: `NSImage` (the only image type SwiftUI on macOS can hold as a template asset), `NSWorkspace.didWakeNotification` for wake detection (Swift-concurrency form: `NSWorkspace.DidWakeMessage`), and `NSApplication.didBecomeActiveNotification` for the notification-authorization re-check (§7.4) — **READ**, Apple docs, macOS.
 
 **Organizational**
 - Solo developer; every always-on dependency is a pager Zane carries alone. The design minimizes runtime dependencies to Apple frameworks + a creation-time-only public API call.
@@ -41,10 +41,10 @@ Evidence labels: **MEASURED** = probed on this host or against the live service 
 | V9 | Host toolchain: Xcode 27.2, macOS SDK 27.2, Swift 6.4.2 — supports macOS 26 target | MEASURED | local probes |
 | V10 | `NSWorkspace.didWakeNotification` / `NSWorkspace.DidWakeMessage` posts on wake from sleep | READ (docs) | developer.apple.com/documentation/appkit/nsworkspace/didwakenotification |
 
-**Claims carried as READ-with-build-verification** (cannot be verified without running code; each has a named fallback):
-- R1: `NSImage(data: svgData)` loads SVG on macOS 11+ and template-tinting (`isTemplate = true`, then SwiftUI tint) renders correctly. Fallback: rasterize via ImageIO/`CGImageSource` at fetch time and store PNG (V7 proves the host rasterization path).
-- R2: missed `UNCalendarNotificationTrigger` deliveries land when the Mac wakes (standard system behavior). Fallback if false at test: the relaunch/wake reconciliation pass (§7.4) already covers it — one notification, at most one re-fire, flag-guarded.
-- R3: MenuBarExtra label with glyph + small count text renders acceptably as the bar icon with badge. Fallback: `NSStatusItem` title-style count next to the glyph.
+**Claims carried as READ-with-build-verification** (cannot be verified without running code; each has a named fallback, decomposed and cost-graded per FEAS-02):
+- R1: `NSImage(data: svgData)` loads SVG on macOS 11+ and template-tinting (`isTemplate = true`, then SwiftUI tint) renders correctly. Fallbacks, decomposed: if decode works but template tinting renders wrong, rasterize the decoded `NSImage` to PNG at fetch time via `NSBitmapImageRep` and cache the PNG — in-app SVG decode on macOS is an `NSImage` path, not bare `CGImageSource`, and this fallback stays on that same path (V7 proves host SVG→PNG rasterization is achievable); if SVG decode itself fails, the bundled fallback glyph set (§5 step 4) covers it.
+- R2: missed `UNCalendarNotificationTrigger` deliveries land when the Mac wakes (standard system behavior). Fallback if false at test — re-derived from the fixed mechanism (§7.4, FEAS-01): the reconciliation pass detects scheduled-but-undelivered state directly. A trigger still pending past its fire date is removed and replaced with one immediate notification; a trigger dropped without delivering is absent from both pending and delivered state and gets one immediate notification. Either way the chip receives exactly one notification from that point, guarded by a flag set only on observed delivery — disclosed bound: at most one re-fire, only if the original delivered and was dismissed before any observation.
+- R3: MenuBarExtra label with glyph + small count text renders acceptably as the bar icon with badge. Fallbacks, cost-graded: (1) cheap — drop the count text, glyph-only with tint escalation and no badge; (2) last resort, an architecture swap — `NSStatusItem` title-style count next to the glyph.
 
 ## 3. Function
 
@@ -83,21 +83,28 @@ Hero time format (normative, all digits monospaced, swap-per-tick):
 
 Any Iconify icon is fair game. The **seed's "fetch + PNG render via API" is corrected** (V6: the public API returns 404 for `.png`; the iOS lane's `ios-icon-gen` rasterizes locally, which is what "vendored" meant). The pipeline, all at creation time only:
 
-1. **Search** — `GET https://api.iconify.design/search?query=<q>&limit=64[&prefix=<p>]`; results rendered in the picker with collection name + license. (V5)
+1. **Search** — `GET https://api.iconify.design/search?query=<q>&limit=64[&prefix=<p>]`; results rendered in the picker with collection name + license. (V5) The picker **discloses the conditional tint at pick time** (operator-approved 2026-11-02 18:32): monotone icons render template + accent tint, palette (multicolor) icons render as-is, untinted. The disclosure uses the search API's collection-level `palette` flag (V5); the authoritative monotone-ness is still detected at fetch time (step 2), and on mismatch the fetched asset wins.
 2. **Fetch** — `GET https://api.iconify.design/{prefix}/{name}.svg?color=%23ffffff&height=256` — white-filled SVG, monotone icons honor the color param (V5). For monotone icons the returned SVG's fills are all `#ffffff`/`currentColor`; palette icons keep their own fills — **monotone-ness is detected by parsing the tiny SVG string's fill values** (measured 262 B), no extra API call.
 3. **Render + cache** — monotone: rasterize the white SVG to PNG (V7 host path), store at `~/Library/Application Support/Till/icons/{prefix}--{name}.png`, load as `NSImage` with `isTemplate = true`, tint per-chip via SwiftUI foreground style (R1, fallback in §2). Palette icons: render as-is in their own colors, no template flag, no tint (accent brightening then applies to the time text only). Cache is content-keyed by icon id and shared across chips; an icon file is evicted when no chip references it.
-4. **Offline fallback set** — a small bundle of template glyphs (SF Symbols renders, pinned in the repo) is offered when the API is unreachable, so chip creation never hard-fails on network. A fallback-icon chip can be re-picked later.
+4. **Offline fallback set** — a small bundle of template glyphs (SF Symbols renders, pinned in the repo) is offered when the API is unreachable, so chip creation never hard-fails on network. A chip created with a fallback icon keeps it: **changing a chip's icon is delete-and-recreate, not an edit** (parent directive, r2). There is no post-creation re-pick path, so "no network after creation" holds with no exception. Recreating with the same icon id is served from the shared cache; recreating with a different icon id is a fresh creation-time fetch, which the invariant allows.
 5. After creation the app makes **no network calls** — settled, and now structurally true: the only networked unit is the picker path.
 
 Failure at any step: inline error in the add field, no chip persisted, retry by the user. No dialogs.
 
+**Creation sequence (normative, ordered — SUF-01, r2): parse → time prompt (date-only input only) → icon fetch → persist → schedule.**
+1. **Parse** (instant). Typed inline error if unparseable — nothing later runs.
+2. **Time prompt** — only when the parser returns `timePromptRequired: true` (plain-date input, §7.1): the field presents an inline time prompt pre-filled with 09:00 local, one tap to accept (operator-approved 2026-11-02 18:32 — no silent default). Cancel aborts creation; nothing is persisted.
+3. **Icon fetch** (the only network step). While it is in flight the add field shows a static pending caption (no spinner — no animation, §4), Enter is inert, and dismissing the popover cancels the in-flight request — no chip exists yet at this stage.
+4. **Persist** — `ChipEntity` saved to SwiftData. The order is deliberate: persist before schedule, so a scheduling failure leaves a live chip that the reconciliation pass (§7.4) can backstop — never an orphaned trigger without a chip.
+5. **Schedule** — the notification trigger (§7.4) if the toggle is ON and authorization is granted. A scheduling failure does not fail creation: the flag stays false and reconciliation catches the chip at its crossing.
+
 A custom art pass later is a pure asset swap — no code change.
 
-## 6. State model (table verbatim from seed; normative rules beneath)
+## 6. State model (table illustrative, retained verbatim from seed; the precedence list below is the sole normative definition)
 
 Each deadline chip (owned by a main-actor `TimerStore`, persisted as one
-`ChipEntity` in SwiftData: icon id, label, deadline, accent, created /
-acknowledged dates, paused flag, `eventIdentifier` reserved for later
+`ChipEntity` in SwiftData: icon id, label, deadline, accent, created date,
+paused flag, `eventIdentifier` reserved for later
 EventKit):
 
 | State | Source | Chip shows | Bar icon |
@@ -110,10 +117,11 @@ EventKit):
 Bar-icon badge counts overdue chips; one static glyph, four tint variants.
 Escalation is driven by the worst active chip, nearest deadline wins ties.
 
-**Normative state rules (resolve the table's overlaps mechanically):**
+**Normative state rules — this list, not the table, is the sole normative state definition (CON-01, r2). The table above is illustrative, kept verbatim from the seed; any case no row names is decided here — e.g. a 45-minute quick timer is Clean (45 m > its 30 m approachWindow) although no illustrative row names it:**
 - `approachWindow` is captured per chip at creation — 30 min for quick-timer input, 2 h for dated input — and persisted. This reconciles "quick timers and dated deadlines are indistinguishable after creation" (true for countdown, notification, and dismissal semantics) with the table's two thresholds: the only surviving distinction is this one display parameter.
-- Precedence: **Dismissed → not rendered. Paused → Paused** (frozen remaining, dimmed, excluded from escalation and badging). Else **deadline ≤ now → Overdue**. Else **remaining ≤ approachWindow → Approaching**. Else **Clean**.
-- Paused semantics: pause records `pausedAt`; frozen remaining = `deadline − pausedAt`; a paused chip never crosses to Overdue (its countdown is suspended, which is what "frozen" and "excluded from badging" require). Resume shifts the deadline: `deadline' = now + frozenRemaining`. Deadline is stored absolute; pause/resume is a store-level deadline mutation, so the state machine stays a pure function of `(deadline, now, paused, dismissed, approachWindow)`.
+- Precedence (Done deletes the row, so the seed's "Dismissed → not rendered" is vacuous in v1 — a chip is either in the store or it is gone): **Paused → Paused** (frozen remaining, dimmed, excluded from escalation and badging). Else **deadline ≤ now → Overdue**. Else **remaining ≤ approachWindow → Approaching**. Else **Clean**.
+- Paused semantics: pause records `pausedAt`; frozen remaining = `deadline − pausedAt`; a paused chip never crosses to Overdue (its countdown is suspended, which is what "frozen" and "excluded from badging" require). Resume shifts the deadline: `deadline' = now + frozenRemaining`. Deadline is stored absolute; pause/resume is a store-level deadline mutation, so the state machine stays a pure function of `(deadline, now, paused, approachWindow)`.
+- Overdue cannot be paused (AMB-01, r2): the pause control is unavailable on an overdue chip — Done is the only exit from Overdue (settled #3). This closes the paused-while-overdue edge (frozen negative remaining) by excluding the action, not by specifying a frozen `+…overdue` paused display.
 - Bar aggregation: worst active (non-paused) chip wins — Overdue > Approaching > Clean; ties broken by nearest deadline. Badge = count of active overdue chips. All paused (or none active) → dimmed glyph, no badge.
 
 **Overdue semantics:** an overdue chip stays `+overdue` until the user clicks
@@ -133,12 +141,12 @@ removed on Done, on pause, and when the toggle is switched OFF.
 Six units, independently testable. `~10–12` source files total. Per the mac-lane intake contract, each persistent/asynchronous feature names: owner of mutable state, isolation domain, creation point, teardown, error recipient, recovery policy.
 
 ### 7.1 `NaturalDeadline` — parser (pure)
-- **Signature:** `parse(_ input: String, now: Date, calendar: Calendar, timeZone: TimeZone) throws -> ParsedDeadline` where `ParsedDeadline = { deadline: Date, approachWindow: TimeInterval, kind: quick|dated }` and errors are typed with user-facing inline-hint text.
+- **Signature:** `parse(_ input: String, now: Date, calendar: Calendar, timeZone: TimeZone) throws -> ParsedDeadline` where `ParsedDeadline = { deadline: Date, approachWindow: TimeInterval, kind: quick|dated, timePromptRequired: Bool }` and errors are typed with user-facing inline-hint text. `timePromptRequired` is true only for plain-date input (below): `deadline` then carries the resolved date at the suggested 09:00 local time, and the creation flow must prompt for the time (§5 creation sequence) before anything is persisted; it is false for every other form.
 - **Ownership:** stateless; no mutable state; no isolation domain. Pure function — the entire unit is table-testable.
 - **Grammar (v1, normative):**
   - Quick: `in <N> <unit>` — unit ∈ `min|m|mins|minutes`, `h|hr|hour|hours`, `d|day|days`. Single term; compound (`in 1h30m`) is a v1 parse error with hint.
   - Weekday/clock: `(mon|tue|…|sun|weekday-full-names) <time>` and `(today|tomorrow) <time>`, `<time>` = `[H][:[MM]] (am|pm)` (e.g. `Fri 5pm`, `Fri 5:30pm`, `tomorrow 9am`). Time is required in this form; missing time → inline error.
-  - Plain date: `Mon D` (`Nov 15`, `Feb 29`) — resolves to **09:00 local** on that date, next occurrence if already past this year (rolls to next year). The 09:00 default is a reasoned choice (a morning deadline is visible all of that day), flagged for the critic — it is the one seed-silent decision in the grammar.
+  - Plain date: `Mon D` (`Nov 15`, `Feb 29`) — resolves the date (next occurrence if already past this year, rolls to next year) and returns `timePromptRequired: true`: the creation flow prompts for a time, pre-filled with **09:00 local** as the suggestion, one tap to accept (operator-approved 2026-11-02 18:32 — no silent default; the 09:00 suggestion keeps a morning deadline visible all of that day).
   - Next-occurrence rule: any computed moment ≤ now rolls forward (weekday → next week; date → next year; `today 5pm` already past → inline error "already passed").
   - All resolution via `Calendar.date(byAdding:/.date(from: DateComponents)` in the user's current calendar/time zone; DST-nonexistent times use `Calendar`'s standard disambiguation; DST and leap-day edges are pinned in the test suite.
 - **Errors:** typed, inline-hint text, no dialogs. Unparseable input stays in the field.
@@ -152,35 +160,41 @@ Six units, independently testable. `~10–12` source files total. Per the mac-la
 - **Invariants:** (1) no network after a chip exists — enforced by the unit's API surface (fetch only from the creation flow) and pinned by an offline round-trip test; (2) cache keyed by icon id, shared, evicted only when unreferenced; (3) monotone icons only get `isTemplate`; palette icons never get template rendering.
 
 ### 7.3 `DeadlineState` — state machine (pure)
-- **Signature:** `state(of chip: ChipSnapshot, at now: Date) -> DeadlineState` plus `barEscalation(activeChips:, now:) -> BarIconState` (worst-active + badge count). Pure functions of `(deadline, now, pausedAt, dismissed, approachWindow)` — table-driven tests cover every row of §6 and the precedence list.
+- **Signature:** `state(of chip: ChipSnapshot, at now: Date) -> DeadlineState` plus `barEscalation(activeChips:, now:) -> BarIconState` (worst-active + badge count). Pure functions of `(deadline, now, pausedAt, approachWindow)` — Done deletes the row, so there is no dismissed state to model — table-driven tests cover every row of §6 and the precedence list.
 - **Ownership:** none (pure). No clocks inside — `now` is always injected.
 
 ### 7.4 `TimerStore` — the one mutable owner (main actor, `@Observable`)
 - **Ownership:** single main-actor owner of the chip list and all mutations (create/edit/pause/resume/done/toggle). Views never mutate `ChipEntity` directly; they call store methods. No globals, no environment-mutating views.
-- **Persistence:** SwiftData, one `ModelContainer` (in-memory in tests), one model `ChipEntity`: `id: UUID`, `iconId: String`, `iconMonotone: Bool`, `label: String?`, `accentHex: String`, `deadline: Date`, `approachWindow: TimeInterval`, `kind: String`, `createdDate: Date`, `acknowledgedAt: Date?` (reserved, written at Done), `pausedAt: Date?`, `zeroCrossingHandled: Bool`, `eventIdentifier: String?` (reserved, unused v1). No CloudKit, no sync, no export. Schema v1; no shipped versions → no migration (V4: automatic lightweight migration available later).
-- **Tick loop (display only):** remaining time derives from `deadline − Date.now` each tick, never from accumulated durations — sleep, display sleep, and drift self-correct on wake. Cadence: 1 s while the popover is open, 30 s otherwise. The store owns the timer and reschedules on popover open/close.
-- **Notifications (mechanism — adjusted from seed, contract unchanged):** at creation (if the toggle is ON and authorization granted) the store schedules one `UNCalendarNotificationTrigger` per chip via `UNUserNotificationCenter`, and sets `zeroCrossingHandled = true`. Pre-scheduling rather than tick-firing means the notification fires **even if the app process is not running** at the crossing, and missed-during-sleep deliveries land on wake (R2) — this subsumes the seed's "catch-up on wake" with strictly fewer failure modes. Removal on: Done, pause, toggle-off, deadline edit (reschedule). Authorization is requested on first timer creation, not at launch (settled).
-- **Reconciliation pass (the catch-up backstop):** on launch and on `NSWorkspace.DidWakeMessage`, for each active chip with `deadline ≤ now && !zeroCrossingHandled`: fire one immediate notification, set the flag. This covers triggers never scheduled (toggle was off at creation and enabled later, authorization granted late, scheduling failure) and any R2 shortfall — the flag is the exactly-once guard across both mechanisms.
+- **Persistence:** SwiftData, one `ModelContainer` (in-memory in tests), one model `ChipEntity`: `id: UUID`, `iconId: String`, `iconMonotone: Bool`, `label: String?`, `accentHex: String`, `deadline: Date`, `approachWindow: TimeInterval`, `kind: String`, `createdDate: Date`, `acknowledgedAt: Date?` (schema-reserved for a future archive view only — never written in v1; Done deletes the row, AMB-01), `pausedAt: Date?`, `zeroCrossingHandled: Bool` (set at first observed delivery, not at scheduling — §7.4 notifications), `eventIdentifier: String?` (reserved, unused v1). No CloudKit, no sync, no export. Schema v1; no shipped versions → no migration (V4: automatic lightweight migration available later).
+- **Tick loop (display only):** remaining time derives from `deadline − Date.now` each tick, never from accumulated durations — sleep, display sleep, and drift self-correct on wake. **Cadence (seed, verbatim — r2 reverts the r1 change): "1s while a chip is visible or within its final stretch, 30s otherwise."** "Visible" = the popover is open; "final stretch" = the chip's persisted `approachWindow` (the term the seed's own table uses for the 30 min / 2 h thresholds). The store owns the timer and reschedules when the popover opens or closes, when a chip enters or leaves its final stretch, and on chip mutations.
+- **Notifications (mechanism — adjusted from seed, contract unchanged):** at creation (if the toggle is ON and authorization granted) the store schedules one `UNCalendarNotificationTrigger` per chip via `UNUserNotificationCenter`. **The flag is NOT set at scheduling (FEAS-01, r2): `zeroCrossingHandled` means "delivery observed" and is set only when delivery is actually observed** — by the delegate on user interaction, or by the reconciliation pass confirming delivery state. The store is the center's delegate (main actor), so a user interaction with a delivered notification sets the flag at first observed delivery. Pre-scheduling rather than tick-firing means the notification fires **even if the app process is not running** at the crossing, and missed-during-sleep deliveries land on wake (R2) — this subsumes the seed's "catch-up on wake" with strictly fewer failure modes. Removal on: Done, pause, toggle-off, deadline edit (reschedule). Authorization is requested on first timer creation, not at launch (settled).
+- **Reconciliation pass (the catch-up backstop — checks pending/delivered state, not just the flag):** on launch and on `NSWorkspace.DidWakeMessage`, for each chip in the store with `deadline ≤ now && !zeroCrossingHandled` (Done deletes the row and overdue chips cannot be paused, so every such chip is active), the store reads `getPendingNotificationRequests()` and `getDeliveredNotifications()`:
+  - trigger **still pending past its fire date** (scheduled, undelivered — the R2-false case): remove the stale request, fire one immediate notification, set the flag;
+  - trigger **absent from pending, present in delivered**: delivered — set the flag, fire nothing;
+  - trigger **absent from both**: never scheduled (toggle off or authorization denied at creation, scheduling failure) or delivered-then-dismissed before any observation — fire one immediate notification, set the flag. Disclosed bound: this is the one window in which a chip can see a second notification (at most one re-fire, only if the user dismissed the original before the app next observed it); the alternative — never firing for never-scheduled chips — is the data-loss mode the seed forbids.
+
+  The flag now guards mechanisms that can actually distinguish scheduled-but-undelivered from delivered, so the R2 fallback (§2) is derived from a real backstop rather than one sharing its guard with the failure it covers. Toggle currently OFF → reconciliation fires nothing.
+- **Authorization watcher (FR-01, r2):** on `NSApplication.didBecomeActiveNotification` and on each launch/wake reconciliation, the store re-reads `getNotificationSettings()`; on a denied→granted transition (toggle ON) it schedules triggers for all chips with `deadline > now` — chips created while authorization was denied get their triggers without waiting to cross first and be caught by reconciliation. Owned by `TimerStore` (main actor); tested via a mocked settings provider.
 - **Pause/resume:** as §6 — record `pausedAt`, remove pending trigger; resume recomputes `deadline' = now + (deadline − pausedAt)`, reschedule trigger, clear `pausedAt`.
 - **Creation point:** app start (composed in the `App` scene, injected into `MenuBarExtra` content). **Teardown:** timer invalidated on app termination; nothing persistent to tear down beyond the container.
 - **Error recipient:** inline (creation path) / settings row (notification authorization states). **Recovery:** every mutation is a SwiftData save; a failed save surfaces inline and the in-memory state rolls back.
 
 ### 7.5 Chips view + bar icon (SwiftUI, immutable views)
-- **Ownership:** no view state beyond local edit/picker sheets-in-popover; everything observable comes from `TimerStore`. Chips grid = `LazyVGrid` two columns inside the `MenuBarExtra` `.window`-style content. Chip card per §4 recipe; context menu (right-click) for Edit / Pause/Resume / Done; Edit loads the chip's fields back into the header field.
+- **Ownership:** no view state beyond local edit/picker sheets-in-popover; everything observable comes from `TimerStore`. Chips grid = `LazyVGrid` two columns inside the `MenuBarExtra` `.window`-style content. Chip card per §4 recipe; context menu (right-click) for Edit / Pause/Resume / Done; Edit loads the chip's fields back into the header field. Edit covers label and deadline only (both local); the pause control is unavailable on overdue chips (§6); an icon change is delete-and-recreate (§5 step 4) — there is no icon edit path.
 - **Bar icon:** `MenuBarExtra` label = static glyph with one of four template tints (normal/amber/red/dimmed) + overdue count as small adjacent text (R3). Driven by `barEscalation`.
 - **Settings:** a footer row in the same popover (no secondary windows — settled): notification toggle (default ON), launch-at-login toggle (default OFF) via `SMAppService.mainApp` register/unregister with `status` displayed and `openSystemSettingsLoginItems()` offered when registration requires it (V2). Settings persist in `UserDefaults` (app settings, not domain data).
 
 ### 7.6 Settings + notification policy
-Covered in 7.4/7.5: app-level toggle default ON; when toggled ON after creation, the store schedules triggers for all active future chips; when OFF, all pending triggers are removed. Denied authorization → toggle disabled with an explanatory line and a link to System Settings; the ambient bar-icon channel is unaffected.
+Covered in 7.4/7.5: app-level toggle default ON; when toggled ON after creation, the store schedules triggers for all active future chips; when OFF, all pending triggers are removed. Denied authorization → toggle disabled with an explanatory line and a link to System Settings; the ambient bar-icon channel is unaffected. **Authorization granted later (FR-01, r2):** the authorization watcher (§7.4) reschedules active futures on the denied→granted transition, so a chip created while denied still gets its notification without waiting to cross.
 
 ## 8. System probes
 
 **Failure modes (what breaks, symptom, detection, recovery):**
 - *App not running at a crossing* (force-quit, logout, or the documented MenuBarExtra auto-terminate on user removal — V1): pre-scheduled triggers still fire (the reason for §7.4's mechanism). The bar icon is dark — accepted limitation; mitigated by launch-at-login. Detection: none needed; the notification is the evidence.
-- *Machine asleep at crossing:* trigger delivery lands on wake (R2) + reconciliation pass as backstop (§7.4). Exactly one notification.
-- *Notification permission denied / Focus suppresses delivery:* bar icon red + badge is the primary ambient channel by design; the notification is the backstop (seed's data-loss mode, kept). No data is lost — the chips persist.
+- *Machine asleep at crossing:* trigger delivery lands on wake (R2); if it does not, the reconciliation pass detects pending-past-fire-date or dropped state directly and fires exactly one (§7.4). At most one re-fire, only in the delivered-and-dismissed-before-observation window (disclosed, §7.4).
+- *Notification permission denied / Focus suppresses delivery:* bar icon red + badge is the primary ambient channel by design; the notification is the backstop (seed's data-loss mode, kept). No data is lost — the chips persist. Permission granted later → the authorization watcher reschedules active futures (§7.4).
 - *Iconify unreachable at creation:* inline error; bundled fallback icons allow creation; no network dependency for any existing chip.
-- *Icon cache corrupt/missing:* provider re-rasterizes from… nothing (SVG is not retained by design — cache holds the raster). Recovery: chip renders the bundled fallback glyph for that icon id until re-picked. (Cache is user-data-adjacent, not user data; chips never reference it for correctness.)
+- *Icon cache corrupt/missing:* provider re-rasterizes from… nothing (SVG is not retained by design — cache holds the raster). Recovery: the chip renders the bundled fallback glyph for that icon id; getting the real icon back is delete-and-recreate (§5 step 4) — a recreate with the same icon id re-fetches at creation time, which the invariant allows. (Cache is user-data-adjacent, not user data; chips never reference it for correctness.)
 - *SwiftData store corruption:* worst case is losing chips — accepted for v1 (no sync, no export; the store lives next to app support). No migration risk in v1 (first schema).
 - *Clock changes (NTP jump, manual change):* everything is absolute-deadline arithmetic; a clock jump shifts display instantaneously but triggers follow wall-clock via calendar triggers. DST pinned by tests.
 
@@ -213,33 +227,34 @@ distribution, not App Store; documented as a deliberate choice).
 
 | Unit | Suite | Coverage that must exist |
 |---|---|---|
-| `NaturalDeadline` | `NaturalDeadlineTests` | grammar positives (every form above), every typed error + inline hint, next-occurrence rolls (weekday, date-to-next-year, today-past), `Nov 15` 09:00 default, DST spring-forward + fall-back edges, Feb 29 leap day, `in 1d` across month boundary, whitespace/case tolerance |
+| `NaturalDeadline` | `NaturalDeadlineTests` | grammar positives (every form above), every typed error + inline hint, next-occurrence rolls (weekday, date-to-next-year, today-past), `Nov 15` → date resolved + `timePromptRequired: true` with the 09:00 suggestion (operator-approved prompt contract), DST spring-forward + fall-back edges, Feb 29 leap day, `in 1d` across month boundary, whitespace/case tolerance |
 | `DeadlineState` | `DeadlineStateTests` | table-driven over every §6 row + full precedence list; bar aggregation: worst-active ordering, nearest-deadline tie-break, badge count, all-paused dimming; overdue display formats |
-| `TimerStore` | `TimerStoreTests` | create→persist→reload round-trip (in-memory container); pause/resume deadline arithmetic exact; trigger schedule/remove/reschedule per mutation (mocked center); reconciliation: fires once (flag), never for dismissed, never when toggle off, wake-after-crossing single fire; toggle-on-late schedules all futures; edit re-parses and reschedules |
+| `TimerStore` | `TimerStoreTests` | create→persist→reload round-trip (in-memory container); creation-sequence order (persist before schedule) and date-only prompt accept/cancel paths; pause/resume deadline arithmetic exact; pause unavailable/rejected for overdue chips; trigger schedule/remove/reschedule per mutation (mocked center); flag NOT set at scheduling, set at observed delivery (mocked delegate interaction); reconciliation against mocked pending/delivered state: pending-past-fire-date → remove + fire once, delivered → flag only + no fire, absent-from-both → fire once, never for dismissed, never when toggle off, wake-after-crossing single fire; toggle-on-late schedules all futures; authorization denied→granted (mocked settings) reschedules active futures; edit re-parses and reschedules |
 | `IconProvider` | `IconProviderTests` | monotone detection (white-fill SVG → template; palette SVG → non-template); cache round-trip + eviction-on-last-reference; fetch failure → typed error + fallback set; **offline invariant**: creation of a chip with cached icon makes zero network calls (URLProtocol mock) |
 | Chips view / bar icon | build + manual checklist | popover layout per §4 recipe, two-per-row, context menu actions, static swap behavior (no transitions), bar tint/badge per escalation table; snapshot tests later if wanted |
 | Whole app | acceptance | `xcodebuild test CODE_SIGNING_ALLOWED=NO -derivedDataPath <custom>` green with captured exit + logs (mac-lane evidence rule) |
 
 swift-testing framework for unit suites (ships with the toolchain); no third-party test deps.
 
-## 12. Deltas from the approved seed (HOW only; the ten settled decisions and the form are untouched)
+## 12. Deltas from the approved seed (HOW only; the ten settled decisions and the form are untouched — one operator-approved exception: settled #7's template tint is scoped to monotone icons, delta 1)
 
-1. **Icon PNG claim corrected:** public Iconify API does not render PNG (V6, measured). Pipeline is now fetch-SVG → local template rasterize → cache, monotone detection by SVG fill parsing, palette icons render untinted. Honors "any icon, fetched at creation, cached, template-rendered, no network after creation."
-2. **Notification mechanism adjusted (catch-up strategy — explicitly delegated to this pass):** pre-scheduled `UNCalendarNotificationTrigger` at creation replaces tick-fired delivery. User contract unchanged (one notification per chip, default-ON toggle, catch-up on wake) — but it now also survives the app not running, which the seed's mechanism could not. Flag-guarded reconciliation pass keeps exactly-once semantics.
+1. **Icon PNG claim corrected:** public Iconify API does not render PNG (V6, measured). Pipeline is now fetch-SVG → local template rasterize → cache, monotone detection by SVG fill parsing at fetch time, palette icons render untinted — settled #7's tint re-scoped to monotone-only and **operator-approved 2026-11-02 18:32**, with the conditional tint disclosed in the picker UI (§5 step 1). Honors "any icon, fetched at creation, cached, no network after creation."
+2. **Notification mechanism adjusted (catch-up strategy — explicitly delegated to this pass; refined r2 per FEAS-01):** pre-scheduled `UNCalendarNotificationTrigger` at creation replaces tick-fired delivery. User contract unchanged (one notification per chip, default-ON toggle, catch-up on wake) — but it now also survives the app not running, which the seed's mechanism could not. Exactly-once is now guarded by a flag set **at first observed delivery** (delegate interaction or reconciliation's delivered-state confirmation), never at scheduling, and the reconciliation pass checks pending/delivered notification state to distinguish scheduled-but-undelivered from delivered (§7.4) — disclosed bound: at most one re-fire, only in the delivered-and-dismissed-before-observation window.
 3. **`approachWindow` per chip** reconciles the table's 30 min / 2 h thresholds with "indistinguishable after creation" (the one display-level distinction that survives).
-4. **Pause mechanics made precise:** `pausedAt` + deadline-shift-on-resume; paused chips cannot go overdue (frozen + excluded from badging required it).
-5. **"No AppKit bridging" narrowed to no AppKit *UI* bridging;** `NSImage` and `NSWorkspace` (data/event APIs) are the two deliberate, documented exceptions.
+4. **Pause mechanics made precise:** `pausedAt` + deadline-shift-on-resume; paused chips cannot go overdue (frozen + excluded from badging required it); overdue chips cannot be paused — Done is the only exit from Overdue (r2, AMB-01).
+5. **"No AppKit bridging" narrowed to no AppKit *UI* bridging;** `NSImage`, `NSWorkspace`, and `NSApplication.didBecomeActive` (data/event APIs) are the three deliberate, documented exceptions (r2 adds the third for the authorization re-check).
 6. **Overdue display formats and hero time formats made normative** (the seed was silent on the <1 h and ≥24 h formats).
 7. **Offline fallback icon set** added (creation never hard-fails on network) — additive, consistent with settled #7.
-8. **Done = delete row** (acknowledgedAt written first, reserved for a future archive view). No dead rows, no archive in v1.
+8. **Done = delete row, definitively** (r2, AMB-01): `acknowledgedAt` is schema-reserved only, never written in v1. No dead rows, no archive in v1.
+9. **Date-only deadlines prompt for a time (r2, operator-approved 2026-11-02 18:32):** plain-date input resolves the date and prompts for a time (09:00 pre-filled, one tap to accept) instead of any silent default — the seed specified no behavior for date-without-time.
 
-## 13. Open questions for the design critic
+## 13. Open items — r2 status
 
-1. **`Nov 15` → 09:00 default:** seed-silent; I chose 09:00 local. Alternatives: 17:00, or require an explicit time. Operator taste call — surface it.
-2. R1/R2/R3 are READ-not-measured; each has a named fallback, but the critic should confirm the fallbacks are cheap enough to be real.
-3. Monotone-vs-palette rendering: is "palette icons render untinted" acceptable, or should v1 restrict the picker to monotone collections (contradicts "any icon" — I chose to honor any icon)?
-4. Badge-as-adjacent-text in the MenuBarExtra label (R3) vs. a title-string count — which reads better at 1 glance?
-5. No-sandbox-for-direct-distribution (§10): deliberate; confirm the critic agrees it's the right v1 posture for a non-App-Store agent app.
+1. ~~`Nov 15` → 09:00 default~~ **Resolved (operator, 2026-11-02 18:32):** no silent default — the creation flow prompts for a time, 09:00 pre-filled as the suggestion, one tap to accept (§7.1, §5 creation sequence).
+2. R1/R2/R3 remain READ-not-measured; fallbacks are now decomposed and cost-graded (§2, FEAS-02): R1 tint failure → `NSBitmapImageRep` raster on the same `NSImage` decode path; R1 decode failure → bundled glyphs; R2 shortfall → the fixed reconciliation mechanism; R3's cheap fallback → glyph-only, badge omitted, with `NSStatusItem` regraded to a last-resort architecture swap. Resolved empirically at build verification.
+3. ~~Monotone-vs-palette rendering~~ **Resolved (operator, 2026-11-02 18:32):** any icon stands; monotone renders template + accent tint, palette renders untinted, disclosed in the picker (§5 step 1).
+4. Badge-as-adjacent-text vs. a title-string count — remains empirical; the R3 render check at build verification resolves it, with the graded fallback list behind it.
+5. No-sandbox-for-direct-distribution (§10) — round-1 critic corroborated; closed.
 
 ## 14. Explicitly out of scope (v1)
 
