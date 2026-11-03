@@ -1,0 +1,4 @@
+_task-context-archive/
+.DS_Store
+.build/
+*.xcodeproj
