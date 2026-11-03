@@ -1,6 +1,6 @@
 # Till — menu bar countdown monitor
 
-**Date:** 2026-11-02 (r1 formalized; r2 revised same day) · **Status:** Design r2 — round-1 critic findings (request-changes) addressed; ready for re-critique
+**Date:** 2026-11-02 (r1 formalized; r2 revised same day) · **Status:** Design r3.1 (approved by design-critic round 4) — round-1 critic findings (request-changes) addressed; ready for re-critique
 **Owner:** Zane Robinson · **Lane:** `cofounder-macos-development` · **Ship as:** Crossed Keys Co.
 **Card:** 1859 · **Provenance:** formalized from the operator-approved seed @ `1cc1b28` (idea `4a3ed107`); the ten settled decisions and the chip UI form are unchanged. Deltas from the seed are listed in §12 and reasoned inline. r3 (bookkeeping + disclosure alignment). **r2 folds in:** two operator decisions (palette icons untinted; date-only deadlines prompt for a time — both approved 2026-11-02 18:32), two parent directives (icon change = delete-and-recreate; tick cadence reverted to the seed verbatim), and all six round-1 critic findings (FEAS-01, FR-01, CON-01, AMB-01, SUF-01, FEAS-02).
 
@@ -191,7 +191,7 @@ Covered in 7.4/7.5: app-level toggle default ON; when toggled ON after creation,
 
 **Failure modes (what breaks, symptom, detection, recovery):**
 - *App not running at a crossing* (force-quit, logout, or the documented MenuBarExtra auto-terminate on user removal — V1): pre-scheduled triggers still fire (the reason for §7.4's mechanism). The bar icon is dark — accepted limitation; mitigated by launch-at-login. Detection: none needed; the notification is the evidence.
-- *Machine asleep at crossing:* trigger delivery lands on wake (R2); if it does not, the reconciliation pass detects pending-past-fire-date or dropped state directly and fires exactly one (§7.4). At most one re-fire: the delivered-and-dismissed-before-observation window, or the non-atomic pending/delivered read window ( disclosed, §7.4).
+- *Machine asleep at crossing:* trigger delivery lands on wake (R2); if it does not, the reconciliation pass detects pending-past-fire-date or dropped state directly and fires exactly one (§7.4). At most one re-fire: the delivered-and-dismissed-before-observation window, or the non-atomic pending/delivered read window (disclosed, §7.4).
 - *Notification permission denied / Focus suppresses delivery:* bar icon red + badge is the primary ambient channel by design; the notification is the backstop (seed's data-loss mode, kept). No data is lost — the chips persist. Permission granted later → the authorization watcher reschedules active futures (§7.4).
 - *Iconify unreachable at creation:* inline error; bundled fallback icons allow creation; no network dependency for any existing chip.
 - *Icon cache corrupt/missing:* provider re-rasterizes from… nothing (SVG is not retained by design — cache holds the raster). Recovery: the chip renders the bundled fallback glyph for that icon id; getting the real icon back is delete-and-recreate (§5 step 4) — a recreate with the same icon id re-fetches at creation time, which the invariant allows. (Cache is user-data-adjacent, not user data; chips never reference it for correctness.)
