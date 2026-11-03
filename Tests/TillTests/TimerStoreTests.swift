@@ -157,6 +157,28 @@ struct Harness {
         #expect(reopened.store.chips.first?.label == "Disk")
     }
 
+    /// Regression: the store must keep its container alive. `makeStoreOnly` drops every
+    /// other reference to the container before the store is used.
+    @Test func storeKeepsItsContainerAlive() async throws {
+        let clock = ClockBox(TestClock.at(2026, 11, 3, 10, 0))
+        func makeStoreOnly() throws -> TimerStore {
+            let container = try TillPersistence.makeContainer(inMemory: true)
+            return TimerStore(
+                container: container, scheduler: MockScheduler(),
+                defaults: UserDefaults(suiteName: "till.tests.\(UUID().uuidString)")!,
+                clock: { clock.now })
+        }
+        let store = try makeStoreOnly()
+        try await store.start()
+        let id = try await store.createChip(
+            NewChip(
+                iconId: "sf:timer", iconMonotone: true, label: nil, accentHex: "#F5A623",
+                parsed: ParsedDeadline(
+                    deadline: clock.now.addingTimeInterval(600), approachWindow: 1800,
+                    kind: .quick, timePromptRequired: false)))
+        #expect(store.chips.map(\.id) == [id])
+    }
+
     @Test func notificationToggleIsPersisted() async throws {
         let h = try Harness()
         await h.store.setNotificationsEnabled(false)

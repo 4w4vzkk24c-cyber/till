@@ -34,6 +34,10 @@ final class TimerStore {
     private(set) var chips: [ChipEntity] = []
     private(set) var notificationsEnabled: Bool
 
+    /// A `ModelContext` does not keep its container alive. The store must retain the
+    /// container it was given, or the first fetch traps once the caller's reference is
+    /// gone (crash seen at launch in `AppModel`, 2026-11-02).
+    @ObservationIgnored private let container: ModelContainer
     @ObservationIgnored private let context: ModelContext
     @ObservationIgnored private let scheduler: any NotificationScheduling
     @ObservationIgnored private let defaults: UserDefaults
@@ -67,6 +71,7 @@ final class TimerStore {
             try await Task.sleep(for: .seconds($0))
         }
     ) {
+        self.container = container
         self.context = container.mainContext
         self.scheduler = scheduler
         self.defaults = defaults
