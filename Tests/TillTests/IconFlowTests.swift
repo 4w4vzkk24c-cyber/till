@@ -162,3 +162,57 @@ import Testing
         #expect(IconPickerModel.disclosure(for: IconChoice.fallbackDefault) == "Built-in icon")
     }
 }
+
+@MainActor
+@Suite struct IconPickerStateTests {
+    private func result(_ id: String) -> IconSearchResult {
+        IconSearchResult(id: id, collectionName: "Material Design Icons", licenseTitle: "Apache 2.0", paletteHint: false)
+    }
+
+    @Test func statusTextCoversEveryState() {
+        #expect(IconPickerModel.statusText(for: .idle, query: "coffee") == nil)
+        #expect(IconPickerModel.statusText(for: .searching, query: "coffee") == "Searching…")
+        #expect(IconPickerModel.statusText(for: .empty, query: "qzxv")
+                == "No icons match “qzxv”. Try a simpler word, such as coffee or bell.")
+        #expect(IconPickerModel.statusText(for: .failed("Hint."), query: "x") == "Hint.")
+    }
+
+    @Test func awkwardQueriesStayIntactInTheNoResultsText() {        // Review Focus 5
+        let q = "“it’s” \"quoted\" " + String(repeating: "a", count: 40)
+        #expect(IconPickerModel.statusText(for: .empty, query: q)!.contains(q))
+    }
+
+    @Test func searchRecordsTheTrimmedQueryAndHighlightsTheFirstResult() async {
+        let model = IconPickerModel(provider: MockIcons(search: .success([result("mdi:coffee"), result("mdi:tea")])))
+        model.query = "  coffee "
+        await model.search()
+        #expect(model.lastQuery == "coffee")
+        #expect(model.highlighted?.id == "mdi:coffee")
+    }
+
+    @Test func emptyAndFailedSearchesClearTheHighlight() async {
+        let empty = IconPickerModel(provider: MockIcons(search: .success([])))
+        empty.highlighted = result("mdi:coffee")
+        empty.query = "zzzz"
+        await empty.search()
+        #expect(empty.highlighted == nil)
+
+        let failed = IconPickerModel(provider: MockIcons(search: .failure(IconError.offline)))
+        failed.highlighted = result("mdi:coffee")
+        failed.query = "coffee"
+        await failed.search()
+        #expect(failed.highlighted == nil)
+        #expect(failed.status == .failed(IconError.offline.hint))
+    }
+
+    @Test func onlyAPageOfResultsIsShown() async {
+        let many = (0..<64).map { result("mdi:icon-\($0)") }
+        let model = IconPickerModel(provider: MockIcons(search: .success(many)))
+        model.query = "icon"
+        await model.search()
+        #expect(model.results.count == 64)
+        #expect(model.visibleResults.count == IconPickerModel.visibleLimit)
+        #expect(IconPickerModel.visibleLimit == 12)
+        #expect(model.visibleResults.first?.id == "mdi:icon-0")
+    }
+}
