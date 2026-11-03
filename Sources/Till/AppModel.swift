@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 import SwiftData
 import UserNotifications
 
@@ -19,14 +20,13 @@ final class AppModel {
 
     /// Under XCTest/swift-testing the app is only a host: do not touch the user's real
     /// store, observers, or notification center.
-    static var isRunningTests: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-            || ProcessInfo.processInfo.environment["XCTestSessionIdentifier"] != nil
-            || NSClassFromString("XCTestCase") != nil
-    }
+    static var isRunningTests: Bool { TestHostSignals.current().isTesting }
 
     init() {
-        let testing = Self.isRunningTests
+        let signals = TestHostSignals.current()
+        let testing = signals.isTesting
+        Logger(subsystem: "com.crossedkeys.till", category: "launch").notice(
+            "testing=\(testing, privacy: .public) configurationFile=\(signals.configurationFile, privacy: .public) sessionIdentifier=\(signals.sessionIdentifier, privacy: .public) xctestClass=\(signals.xctestClassLoaded, privacy: .public)")
         var message: String?
         let container: ModelContainer
         if testing {
@@ -95,5 +95,23 @@ final class AppModel {
         let dir = base.appendingPathComponent("Till", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("till.store")
+    }
+}
+
+/// Which "this process is a test host" signals fired. Kept separate so a launch log can
+/// show which one tripped (handoff H1: the XCTestCase class check may misfire).
+struct TestHostSignals: Equatable {
+    let configurationFile: Bool
+    let sessionIdentifier: Bool
+    let xctestClassLoaded: Bool
+
+    var isTesting: Bool { configurationFile || sessionIdentifier || xctestClassLoaded }
+
+    static func current() -> TestHostSignals {
+        let env = ProcessInfo.processInfo.environment
+        return TestHostSignals(
+            configurationFile: env["XCTestConfigurationFilePath"] != nil,
+            sessionIdentifier: env["XCTestSessionIdentifier"] != nil,
+            xctestClassLoaded: NSClassFromString("XCTestCase") != nil)
     }
 }

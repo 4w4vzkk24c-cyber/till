@@ -60,6 +60,9 @@ enum IconError: Error, Equatable, Sendable {
     case invalidQuery
     case invalidIconID
     case network
+    case offline
+    case tls
+    case timedOut
     case badStatus(Int)
     case decodeFailed
     case rasterizeFailed
@@ -70,8 +73,16 @@ enum IconError: Error, Equatable, Sendable {
         switch self {
         case .invalidQuery: return "Type a word to search icons, e.g. “coffee”."
         case .invalidIconID: return "That icon can’t be used. Pick another."
-        case .network, .badStatus:
-            return "Couldn’t reach the icon service. Pick a built-in icon or try again."
+        case .network:
+            return "Can’t reach the icon service. Check your connection, or pick a built-in icon."
+        case .badStatus(let code):
+            return "The icon service returned an error (\(code)). Try again, or pick a built-in icon."
+        case .offline:
+            return "You’re offline. Pick a built-in icon, or try again once you’re connected."
+        case .tls:
+            return "Can’t make a secure connection to the icon service. Check your VPN or proxy, or pick a built-in icon."
+        case .timedOut:
+            return "The icon service didn’t answer in time. Try again, or pick a built-in icon."
         case .decodeFailed, .rasterizeFailed, .cacheWriteFailed:
             return "Couldn’t prepare that icon. Pick another or a built-in one."
         }

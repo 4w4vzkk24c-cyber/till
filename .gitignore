@@ -4,3 +4,4 @@ _task-context-archive/
 *.xcodeproj
 Sources/Till/Info.plist
 artifacts/
+.superpowers/

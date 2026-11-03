@@ -59,9 +59,13 @@ actor IconProvider: IconFetching {
         components.queryItems = items
         guard let url = components.url else { throw IconError.invalidQuery }
 
-        let (body, status) = try await get(url)
-        guard status == 200 else { throw IconError.badStatus(status) }
+        let (body, status) = try await get(url, operation: "search")
+        guard status == 200 else {
+            IconLog.recordStatus(status, operation: "search")
+            throw IconError.badStatus(status)
+        }
         guard let response = try? JSONDecoder().decode(SearchResponse.self, from: body) else {
+            IconLog.logger.error("search decode failed")
             throw IconError.decodeFailed
         }
         return response.icons.compactMap { id in
@@ -83,10 +87,14 @@ actor IconProvider: IconFetching {
             string: "https://\(Self.apiHost)/\(parsed.prefix)/\(parsed.name).svg?color=%23ffffff&height=256")
         else { throw IconError.invalidIconID }
 
-        let (body, status) = try await get(url)
-        guard status == 200 else { throw IconError.badStatus(status) }
+        let (body, status) = try await get(url, operation: "fetch")
+        guard status == 200 else {
+            IconLog.recordStatus(status, operation: "fetch")
+            throw IconError.badStatus(status)
+        }
         guard !body.isEmpty, body.count <= Self.maxSVGBytes,
               let svg = String(data: body, encoding: .utf8), svg.contains("<svg") else {
+            IconLog.logger.error("fetch decode failed")
             throw IconError.decodeFailed
         }
         let monotone = SVGColorInspector.isMonotone(svg)
@@ -158,7 +166,7 @@ actor IconProvider: IconFetching {
 
     // MARK: - Networking
 
-    private func get(_ url: URL) async throws -> (Data, Int) {
+    private func get(_ url: URL, operation: String) async throws -> (Data, Int) {
         do {
             let result = try await network.get(url)
             return (result.body, result.status)
@@ -167,7 +175,8 @@ actor IconProvider: IconFetching {
         } catch let error as URLError where error.code == .cancelled {
             throw CancellationError()
         } catch {
-            throw IconError.network
+            IconLog.record(error, operation: operation)
+            throw IconFailure.classify(error)
         }
     }
 }

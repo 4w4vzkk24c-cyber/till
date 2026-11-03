@@ -96,7 +96,7 @@ import Testing
         let bad = makeProvider(network: .serving("{}", status: 500), directory: dir)
         await #expect(throws: IconError.badStatus(500)) { try await bad.search(query: "x", prefix: nil, limit: 64) }
         let offline = makeProvider(network: .offline, directory: dir)
-        await #expect(throws: IconError.network) { try await offline.search(query: "x", prefix: nil, limit: 64) }
+        await #expect(throws: IconError.offline) { try await offline.search(query: "x", prefix: nil, limit: 64) }
         let garbage = makeProvider(network: .serving("not json"), directory: dir)
         await #expect(throws: IconError.decodeFailed) { try await garbage.search(query: "x", prefix: nil, limit: 64) }
     }
@@ -165,11 +165,18 @@ import Testing
         #expect(offline.requests.isEmpty)
     }
 
+    @Test func tlsFailureIsTyped() async throws {
+        let dir = try TempDir.make()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let provider = makeProvider(network: MockNetwork { _ in throw URLError(.secureConnectionFailed) }, directory: dir)
+        await #expect(throws: IconError.tls) { try await provider.search(query: "x", prefix: nil, limit: 64) }
+    }
+
     @Test func uncachedIconOfflineFailsWithTypedError() async throws {
         let dir = try TempDir.make()
         defer { try? FileManager.default.removeItem(at: dir) }
         let provider = makeProvider(network: .offline, directory: dir)
-        await #expect(throws: IconError.network) { try await provider.fetch(id: "mdi:timer") }
+        await #expect(throws: IconError.offline) { try await provider.fetch(id: "mdi:timer") }
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).isEmpty)
     }
 
