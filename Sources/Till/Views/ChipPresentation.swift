@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// What a chip tile shows for a state, as plain values (spec A2 chip table). The view
@@ -29,5 +30,22 @@ struct ChipPresentation: Equatable {
             surface = .paused; caption = "paused"; control = .resume
             hero = heroText
         }
+    }
+}
+
+/// Explicit height for the chip grid. The menu-bar window sizes itself from its content's
+/// natural height, and a `ScrollView` given only a maximum has almost none, so the window
+/// opened too short and clipped the tiles. The height is computed from the chip count, and
+/// capped so long lists scroll.
+enum ChipGridLayout {
+    static let tileHeight: CGFloat = 152
+    static let gap: CGFloat = 8
+    static let maxHeight: CGFloat = 480        // three full rows (472) with room to spare
+
+    static func height(forChips count: Int) -> CGFloat {
+        guard count > 0 else { return 0 }
+        let rows = (count + 1) / 2
+        let natural = CGFloat(rows) * tileHeight + CGFloat(rows - 1) * gap
+        return min(natural, maxHeight)
     }
 }

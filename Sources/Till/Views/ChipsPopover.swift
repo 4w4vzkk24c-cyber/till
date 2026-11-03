@@ -64,7 +64,7 @@ struct ChipsPopover: View {
             emptyState(theme)
         } else {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: Theme.Space.s) {
+                LazyVGrid(columns: columns, spacing: ChipGridLayout.gap) {
                     ForEach(items) { item in
                         ChipCardView(
                             data: item, now: store.now,
@@ -74,7 +74,7 @@ struct ChipsPopover: View {
                     }
                 }
             }
-            .frame(maxHeight: 470)
+            .frame(height: ChipGridLayout.height(forChips: items.count))
         }
     }
 

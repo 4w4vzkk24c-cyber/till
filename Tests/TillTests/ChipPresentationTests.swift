@@ -42,3 +42,31 @@ import Testing
         #expect(p.hero == "+41m" && p.caption == "overdue")
     }
 }
+
+@Suite struct ChipGridLayoutTests {
+    @Test func noChipsNeedNoGrid() { #expect(ChipGridLayout.height(forChips: 0) == 0) }
+
+    @Test func oneRowHoldsOneOrTwoChips() {
+        #expect(ChipGridLayout.height(forChips: 1) == ChipGridLayout.tileHeight)
+        #expect(ChipGridLayout.height(forChips: 2) == ChipGridLayout.tileHeight)
+    }
+
+    @Test func rowsAddTileHeightPlusGap() {
+        #expect(ChipGridLayout.height(forChips: 3) == 2 * ChipGridLayout.tileHeight + ChipGridLayout.gap)
+        #expect(ChipGridLayout.height(forChips: 4) == 2 * ChipGridLayout.tileHeight + ChipGridLayout.gap)
+        #expect(ChipGridLayout.height(forChips: 5) == 3 * ChipGridLayout.tileHeight + 2 * ChipGridLayout.gap)
+    }
+
+    @Test func threeRowsFitWithoutScrolling() {
+        #expect(ChipGridLayout.height(forChips: 6) == 3 * ChipGridLayout.tileHeight + 2 * ChipGridLayout.gap)
+    }
+
+    @Test func longerListsAreCappedAndScroll() {
+        #expect(ChipGridLayout.height(forChips: 7) == ChipGridLayout.maxHeight)
+        #expect(ChipGridLayout.height(forChips: 40) == ChipGridLayout.maxHeight)
+    }
+
+    @Test func theCapShowsThreeFullRows() {
+        #expect(ChipGridLayout.maxHeight >= 3 * ChipGridLayout.tileHeight + 2 * ChipGridLayout.gap)
+    }
+}

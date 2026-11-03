@@ -53,7 +53,7 @@ struct ChipCardView: View {
         .padding(.horizontal, 6)
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity)
-        .frame(height: 152)
+        .frame(height: ChipGridLayout.tileHeight)
         .background { surface(p.surface, theme) }
         .contextMenu {
             Button("Edit", action: onEdit)
