@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import SwiftUI
 
 /// What a chip tile shows for a state, as plain values (spec A2 chip table). The view
 /// maps these to colours and glyphs; the decisions live here so they are unit-tested.
@@ -48,3 +49,24 @@ enum ChipGridLayout {
         return min(natural, maxHeight)
     }
 }
+
+/// Rendering of the hero time. The text is the normative `HeroTime` string; only the space
+/// between units ("14h 32m") is drawn a little tighter, because a monospaced space is as
+/// wide as a digit (about 16 pt at 26 pt) and read as a gap.
+enum ChipHero {
+    static let unitSpaceKern: CGFloat = -5
+
+    static func attributed(_ text: String) -> AttributedString {
+        var result = AttributedString()
+        for (index, part) in text.split(separator: " ", omittingEmptySubsequences: false).enumerated() {
+            if index > 0 {
+                var space = AttributedString(" ")
+                space.kern = unitSpaceKern
+                result += space
+            }
+            result += AttributedString(String(part))
+        }
+        return result
+    }
+}
+

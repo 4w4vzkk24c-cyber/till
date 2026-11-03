@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import Till
 
@@ -65,3 +66,35 @@ import Testing
         #expect(ChipGridLayout.maxHeight >= 3 * ChipGridLayout.tileHeight + 2 * ChipGridLayout.gap)
     }
 }
+
+@Suite struct ChipHeroTests {
+    @Test func theTextIsUnchanged() {
+        for text in ["14h 32m", "3d 14h", "4:12", "+41m"] {
+            #expect(String(ChipHero.attributed(text).characters) == text)
+        }
+    }
+
+    @Test func onlySpacesBetweenUnitsAreTightened() {
+        let attributed = ChipHero.attributed("14h 32m")
+        var spaces = 0
+        for run in attributed.runs {
+            if String(attributed[run.range].characters) == " " {
+                spaces += 1
+                #expect(run.kern == ChipHero.unitSpaceKern)
+            } else {
+                #expect(run.kern == nil)
+            }
+        }
+        #expect(spaces == 1)
+    }
+
+    @Test func theTighteningIsSlight() {
+        // A monospaced space at 26 pt is about 16 pt wide; reduce it a little, never close it.
+        #expect(ChipHero.unitSpaceKern < 0 && ChipHero.unitSpaceKern >= -8)
+    }
+
+    @Test func textWithoutASpaceHasNoKerning() {
+        for run in ChipHero.attributed("+41m").runs { #expect(run.kern == nil) }
+    }
+}
+

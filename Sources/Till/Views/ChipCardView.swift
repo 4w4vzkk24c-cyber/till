@@ -26,7 +26,7 @@ struct ChipCardView: View {
                 .frame(width: 40, height: 40)
                 .opacity(p.surface == .paused ? 0.5 : 1)
 
-            Text(p.hero)
+            Text(ChipHero.attributed(p.hero))
                 .font(.system(size: 26, weight: .bold, design: .monospaced))
                 .foregroundStyle(heroColor(p.surface, theme))
                 .lineLimit(1)
