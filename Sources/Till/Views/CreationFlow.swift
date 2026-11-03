@@ -40,7 +40,7 @@ final class CreationFlow {
     @ObservationIgnored private var generation = 0
 
     /// Identity colours for new chips, kept out of the state hues (amber and red mean state).
-    static let accents = ["#6FCFFF", "#8FE0A0", "#D2A4FF", "#FF93C9", "#5EE0CF", "#A8B1FF"]
+    nonisolated static let accents = ["#6FCFFF", "#8FE0A0", "#D2A4FF", "#FF93C9", "#5EE0CF", "#A8B1FF"]
     static let genericHint = "Couldn’t save that. Try again."
 
     init(
