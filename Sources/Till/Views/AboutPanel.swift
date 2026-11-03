@@ -13,18 +13,30 @@ enum AboutPanel {
     static func show() {
         let openedFrom = NSApp.keyWindow?.level ?? .normal     // the popover is the key window
         NSApp.activate()
-        let credits = NSAttributedString(
-            string: Credits.text(),
-            attributes: [
-                .font: NSFont.systemFont(ofSize: 11),
-                .foregroundColor: NSColor.labelColor,
-            ])
-        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+        NSApp.orderFrontStandardAboutPanel(options: options())
         for window in NSApp.windows where shouldRaise(styleMask: window.styleMask, isVisible: window.isVisible) {
             window.level = raisedLevel(above: openedFrom)
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()
         }
+    }
+
+    /// The credits text, and the app icon passed explicitly: the panel otherwise asks the
+    /// system for the running app's icon, which for a debug build can still be the generic
+    /// placeholder although Finder shows the real one (operator report, 2026-11-03).
+    static func options() -> [NSApplication.AboutPanelOptionKey: Any] {
+        var options: [NSApplication.AboutPanelOptionKey: Any] = [
+            .credits: NSAttributedString(
+                string: Credits.text(),
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: 11),
+                    .foregroundColor: NSColor.labelColor,
+                ]),
+        ]
+        if let icon = NSImage(named: "AppIcon") {
+            options[.applicationIcon] = icon
+        }
+        return options
     }
 
     /// The About panel is a visible, titled window; the MenuBarExtra popover is not titled.

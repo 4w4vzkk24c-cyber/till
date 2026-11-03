@@ -74,3 +74,17 @@ import Testing
     }
 }
 
+
+@MainActor
+@Suite struct AppIconTests {
+    @Test func theAppIconAssetIsInTheAppBundle() {
+        // The tests run hosted inside Till.app, so this looks in the app's own asset catalog.
+        #expect(NSImage(named: "AppIcon") != nil)
+    }
+
+    @Test func theAboutPanelIsGivenTheIconExplicitly() {
+        let options = AboutPanel.options()
+        #expect(options[.applicationIcon] != nil)
+        #expect(options[.credits] != nil)
+    }
+}
