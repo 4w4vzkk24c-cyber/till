@@ -17,18 +17,17 @@ struct ChipCardView: View {
         let state = data.state(at: now)
         let theme = Theme(scheme, contrast)
         let p = ChipPresentation(state: state, heroText: data.heroText(at: now))
-        let overdue = p.surface == .overdue
 
         VStack(spacing: 2) {
             ChipIconView(
                 iconId: data.iconId, monotone: data.iconMonotone,
-                tint: overdue ? .white : theme.accent(data.accentHex))
+                tint: theme.color(p.iconTone, accentHex: data.accentHex))
                 .frame(width: 40, height: 40)
-                .opacity(p.surface == .paused ? 0.5 : 1)
+                .opacity(p.iconOpacity)
 
             Text(ChipHero.attributed(p.hero))
                 .font(.system(size: 26, weight: .bold, design: .monospaced))
-                .foregroundStyle(heroColor(p.surface, theme))
+                .foregroundStyle(theme.color(p.heroTone, accentHex: data.accentHex))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(height: 28)
@@ -78,15 +77,6 @@ struct ChipCardView: View {
         }
     }
 
-    private func heroColor(_ s: ChipPresentation.Surface, _ theme: Theme) -> Color {
-        switch s {
-        case .neutral: return theme.ink
-        case .dueSoon: return theme.amber
-        case .overdue: return .white
-        case .paused: return theme.ink2
-        }
-    }
-
     // MARK: - Control
 
     /// Pause / resume, or Done on an overdue tile (Done is the only exit from Overdue,
@@ -101,11 +91,11 @@ struct ChipCardView: View {
                 case .done: Text("Done").font(.system(size: 13, weight: .semibold))
                 }
             }
-            .foregroundStyle(p.control == .done ? Color.white : theme.ink)
+            .foregroundStyle(theme.color(p.controlTone, accentHex: ""))
             .frame(maxWidth: .infinity)
             .frame(height: 26)
             .background(
-                p.control == .done ? Color.black.opacity(0.28) : Color.clear,
+                p.controlHasFill ? Color.black.opacity(0.28) : Color.clear,
                 in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
             .contentShape(Rectangle())
         }

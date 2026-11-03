@@ -15,6 +15,36 @@ import Testing
         }
     }
 
+    @Test func heroColourFollowsState() {
+        #expect(ChipPresentation(state: .clean, heroText: "1h").heroTone == .primary)
+        #expect(ChipPresentation(state: .approaching, heroText: "4:12").heroTone == .amber)
+        #expect(ChipPresentation(state: .overdue, heroText: "+1m overdue").heroTone == .onRed)
+        #expect(ChipPresentation(state: .paused, heroText: "1h").heroTone == .secondary)
+    }
+
+    @Test func theIconKeepsItsAccentExceptOnTheRedTile() {
+        for state in [ChipState.clean, .approaching, .paused] {
+            #expect(ChipPresentation(state: state, heroText: "1h").iconTone == .accent)
+        }
+        #expect(ChipPresentation(state: .overdue, heroText: "+1m overdue").iconTone == .onRed)
+    }
+
+    @Test func onlyAPausedIconIsDimmed() {
+        #expect(ChipPresentation(state: .paused, heroText: "1h").iconOpacity == 0.5)
+        for state in [ChipState.clean, .approaching, .overdue] {
+            #expect(ChipPresentation(state: state, heroText: "1h").iconOpacity == 1)
+        }
+    }
+
+    @Test func onlyDoneHasAFilledControlWithLightText() {
+        let done = ChipPresentation(state: .overdue, heroText: "+1m overdue")
+        #expect(done.control == .done && done.controlHasFill && done.controlTone == .onRed)
+        for state in [ChipState.clean, .approaching, .paused] {
+            let p = ChipPresentation(state: state, heroText: "1h")
+            #expect(!p.controlHasFill && p.controlTone == .primary)
+        }
+    }
+
     @Test func overdueHeroDropsTheWordOverdue() {              // Review Focus 2
         #expect(ChipPresentation(state: .overdue, heroText: "+41m overdue").hero == "+41m")
         #expect(ChipPresentation(state: .overdue, heroText: "+50h overdue").hero == "+50h")
