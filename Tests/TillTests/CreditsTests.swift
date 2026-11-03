@@ -33,7 +33,7 @@ import Testing
     @Test func eachCreditListsItsIconNames() {
         let text = Credits.text()
         for id in ["hugeicons:bio-energy", "emojione-monotone:tomato", "builtin:seedling", "logos:ollama"] {
-            #expect(text.contains(FallbackIcons.displayName(for: id)), id)
+            #expect(text.contains(FallbackIcons.displayName(for: id)), "\(id)")
         }
     }
 
@@ -41,7 +41,7 @@ import Testing
         let text = Credits.text()
         #expect(text.contains("trademarks of their owners"))
         #expect(text.contains("not affiliated with or endorsed by"))
-        for name in ["Claude", "OpenAI", "Z.ai", "opencode", "Ollama"] { #expect(text.contains(name), name) }
+        for name in ["Claude", "OpenAI", "Z.ai", "opencode", "Ollama"] { #expect(text.contains(name), "\(name)") }
     }
 
     @Test func iconsPickedFromIconifyKeepTheirOwnLicenses() {
