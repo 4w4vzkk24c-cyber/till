@@ -50,8 +50,7 @@ struct IconChoice: Sendable, Equatable {
     let collectionName: String?
     let licenseTitle: String?
 
-    static let fallbackDefault = IconChoice(
-        id: FallbackIcons.defaultID, monotone: true, collectionName: nil, licenseTitle: nil)
+    static let fallbackDefault = FallbackIcons.choice(for: FallbackIcons.defaultID)
 
     var isBuiltIn: Bool { FallbackIcons.isBuiltIn(id) }
 }

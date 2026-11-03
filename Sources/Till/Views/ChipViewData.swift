@@ -51,44 +51,53 @@ extension Color {
     }
 }
 
-/// Built-in glyphs (design §5 step 4), always available offline and never fetched: SF
-/// Symbols referenced as `sf:<name>`, plus the bundled seedling as `builtin:seedling`.
-/// The seedling is the default icon (operator decision, 2026-11-03).
+/// Built-in icons (design §5 step 4): always available offline and never fetched. SF Symbols
+/// (`sf:<name>`, still rendered for chips made earlier) and bundled Iconify icons
+/// (`BundledIconCatalog`). The picker's built-in row is `all`; `defaultID` is the icon a new
+/// chip starts with (operator decision, 2026-11-03).
 enum FallbackIcons {
     static let seedlingID = "builtin:seedling"
-    static let defaultID = seedlingID
+    static let defaultID = "hugeicons:bio-energy"
     static let all = [
-        seedlingID, "sf:timer", "sf:bell", "sf:cup.and.saucer", "sf:fork.knife",
-        "sf:pills", "sf:phone", "sf:car", "sf:flame",
+        defaultID, "logos:claude-icon", "logos:openai-icon", "logos:z-ai", "logos:opencode-icon",
+        "logos:ollama", "withicons:peacock-feather-sketch", "at-icons:lightning-bolt",
+        "emojione-monotone:tomato",
     ]
 
-    /// True for ids that need no network: SF Symbols and bundled glyphs.
+    /// True for ids that need no network: SF Symbols, `builtin:` ids and bundled icons.
     static func isBuiltIn(_ iconId: String) -> Bool {
-        iconId.hasPrefix("sf:") || iconId.hasPrefix("builtin:")
+        iconId.hasPrefix("sf:") || iconId.hasPrefix("builtin:") || BundledIconCatalog.contains(iconId)
     }
 
     static func symbolName(for iconId: String) -> String? {
         iconId.hasPrefix("sf:") ? String(iconId.dropFirst(3)) : nil
     }
 
-    /// Plain name for accessibility text: `cup.and.saucer`, `seedling`.
+    /// Plain name for accessibility text: `cup.and.saucer`, `bio-energy`, `seedling`.
     static func displayName(for iconId: String) -> String {
-        if iconId.hasPrefix("sf:") { return String(iconId.dropFirst(3)) }
-        if iconId.hasPrefix("builtin:") { return String(iconId.dropFirst(8)) }
-        return iconId
+        guard let colon = iconId.firstIndex(of: ":") else { return iconId }
+        return String(iconId[iconId.index(after: colon)...])
+    }
+
+    /// The picker choice for a built-in id, with its collection and license when bundled.
+    static func choice(for iconId: String) -> IconChoice {
+        let bundled = BundledIconCatalog.icon(for: iconId)
+        return IconChoice(
+            id: iconId, monotone: bundled?.monotone ?? true,
+            collectionName: bundled?.collection, licenseTitle: bundled?.license)
     }
 }
 
-/// Bundled (non-SF) glyphs, rasterized once from the embedded SVG (`BarGlyph`) and memoized
-/// so the 1 s display tick does no work.
+/// Bundled icons rasterized once from their embedded SVG and memoized, so the 1 s display
+/// tick does no work.
 @MainActor
 enum BundledIcons {
     private static var memo: [String: NSImage] = [:]
 
     static func image(for iconId: String) -> NSImage? {
-        guard iconId == FallbackIcons.seedlingID else { return nil }
         if let hit = memo[iconId] { return hit }
-        guard let png = try? SVGRasterizer.pngData(from: Data(BarGlyph.seedlingSVG.utf8), pixels: 128),
+        guard let icon = BundledIconCatalog.icon(for: iconId),
+              let png = try? SVGRasterizer.pngData(from: Data(icon.svg.utf8), pixels: 128),
               let image = NSImage(data: png) else { return nil }
         memo[iconId] = image
         return image
@@ -126,8 +135,12 @@ struct ChipIconView: View {
         if let symbol = FallbackIcons.symbolName(for: iconId) {
             Image(systemName: symbol).resizable().scaledToFit().foregroundStyle(tint)
         } else if let bundled = BundledIcons.image(for: iconId) {
-            Image(nsImage: bundled).renderingMode(.template).resizable().scaledToFit()
-                .foregroundStyle(tint)
+            if monotone {
+                Image(nsImage: bundled).renderingMode(.template).resizable().scaledToFit()
+                    .foregroundStyle(tint)
+            } else {
+                Image(nsImage: bundled).renderingMode(.original).resizable().scaledToFit()
+            }
         } else if let image = IconCache.image(for: iconId) {
             if monotone {
                 Image(nsImage: image).renderingMode(.template).resizable().scaledToFit()

@@ -1,21 +1,31 @@
 # Third-party notices
 
-Till has no third-party code dependencies. It bundles one third-party artwork asset and
-fetches others at the user's request.
+Till has no third-party code dependencies. It bundles third-party icon artwork and fetches
+more at the user's request.
 
-## Menu-bar glyph
+## Bundled icons (offline defaults)
 
-- **Asset:** `seedling` from Font Awesome 5 Solid (Iconify id `fa-solid:seedling`), embedded in
-  `Sources/Till/Views/BarGlyph.swift`.
-- **Author:** Dave Gandy, Font Awesome (https://github.com/FortAwesome/Font-Awesome).
-- **License:** Creative Commons Attribution 4.0 International (CC BY 4.0),
-  https://creativecommons.org/licenses/by/4.0/. The glyph was recoloured (white fill) and
-  rasterized; no other change to the shapes.
-- **Source of the data:** the `@iconify-json/fa-solid` package (version 1.2.2, Font Awesome 5.15.4).
+Embedded as SVG in `Sources/Till/Views/BundledIconCatalog.swift` and `BarGlyph.swift`.
+Data taken from the `@iconify-json/*` packages on 2026-11-03. Monotone icons were recoloured
+white so they can be tinted; the shapes are unchanged.
 
-CC BY 4.0 requires attribution. Before shipping a build, surface this credit where users can
-find it (for example an About line or the download page); the repository file alone does not
-satisfy it for people who only have the app.
+| Icon | Set | Author | License |
+|---|---|---|---|
+| `hugeicons:bio-energy` (default chip icon) | Huge Icons | Hugeicons | MIT |
+| `withicons:peacock-feather-sketch` | with icons | Evergrow | MIT |
+| `at-icons:lightning-bolt` | @icons | Valentin Fossati | MIT |
+| `emojione-monotone:tomato` | Emoji One (Monotone) | Emoji One | CC BY 4.0 |
+| `logos:claude-icon`, `logos:openai-icon`, `logos:z-ai`, `logos:opencode-icon`, `logos:ollama` | SVG Logos | Gil Barbara | CC0 1.0 |
+| `fa-solid:seedling` (menu-bar glyph) | Font Awesome 5 Solid | Dave Gandy, Font Awesome | CC BY 4.0 |
+
+- **Attribution needed before shipping.** CC BY 4.0 (Emoji One, Font Awesome) requires credit to
+  the author, and MIT (Hugeicons, with icons, @icons) requires the copyright and permission
+  notice to accompany copies. The repository file alone does not satisfy either for people who
+  only have the app: surface these credits where users can find them (for example an About line
+  and the download page) and include the MIT license texts.
+- **Company marks.** The Claude, OpenAI, Z.ai, opencode and Ollama logos are trademarks of their
+  owners. The SVG Logos collection is CC0 for the artwork, which does not grant any trademark
+  rights. Using them here, as icons a person picks to stand for a timer, is the operator's call.
 
 ## Icons fetched from Iconify
 

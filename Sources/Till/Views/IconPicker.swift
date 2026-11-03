@@ -202,10 +202,9 @@ struct IconPickerView: View {
             HStack(spacing: 6) {
                 ForEach(FallbackIcons.all, id: \.self) { id in
                     Button {
-                        creation.selectIcon(
-                            IconChoice(id: id, monotone: true, collectionName: nil, licenseTitle: nil))
+                        creation.selectIcon(FallbackIcons.choice(for: id))
                     } label: {
-                        ChipIconView(iconId: id, monotone: true, tint: theme.ink)
+                        ChipIconView(iconId: id, monotone: FallbackIcons.choice(for: id).monotone, tint: theme.ink)
                             .frame(width: 16, height: 16)
                             .frame(width: 26, height: 26)
                             .background(

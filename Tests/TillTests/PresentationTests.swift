@@ -71,16 +71,29 @@ import Testing
         #expect(FallbackIcons.all.contains(FallbackIcons.defaultID))
     }
 
-    @Test func theSeedlingIsTheDefaultBuiltIn() {
-        #expect(FallbackIcons.defaultID == "builtin:seedling")
-        #expect(FallbackIcons.all.first == FallbackIcons.defaultID)
-        #expect(FallbackIcons.isBuiltIn("builtin:seedling"))
+    @Test func bioEnergyIsTheDefaultAndTheBuiltInRowIsTheNineDefaults() {
+        #expect(FallbackIcons.defaultID == "hugeicons:bio-energy")
+        #expect(FallbackIcons.all == [
+            "hugeicons:bio-energy", "logos:claude-icon", "logos:openai-icon", "logos:z-ai",
+            "logos:opencode-icon", "logos:ollama", "withicons:peacock-feather-sketch",
+            "at-icons:lightning-bolt", "emojione-monotone:tomato",
+        ])
+        #expect(IconChoice.fallbackDefault.id == "hugeicons:bio-energy")
+        #expect(IconChoice.fallbackDefault.isBuiltIn)                  // never fetched from the network
+    }
+
+    @Test func builtInsIncludeSFSymbolsBundledIconsAndTheOldSeedling() {
         #expect(FallbackIcons.isBuiltIn("sf:timer"))
+        #expect(FallbackIcons.isBuiltIn("builtin:seedling"))            // chips made by the previous build
+        #expect(FallbackIcons.isBuiltIn("hugeicons:bio-energy"))
         #expect(!FallbackIcons.isBuiltIn("mdi:coffee"))
-        #expect(FallbackIcons.symbolName(for: "builtin:seedling") == nil)     // not an SF Symbol
-        #expect(FallbackIcons.displayName(for: "builtin:seedling") == "seedling")
+        #expect(!FallbackIcons.isBuiltIn("hugeicons:something-else"))   // same set, not bundled: fetched as usual
+    }
+
+    @Test func displayNamesAreReadable() {
         #expect(FallbackIcons.displayName(for: "sf:cup.and.saucer") == "cup.and.saucer")
-        #expect(IconChoice.fallbackDefault.isBuiltIn)                          // never fetched from the network
+        #expect(FallbackIcons.displayName(for: "hugeicons:bio-energy") == "bio-energy")
+        #expect(FallbackIcons.displayName(for: "builtin:seedling") == "seedling")
     }
 }
 
@@ -163,13 +176,15 @@ import Testing
 
 @MainActor
 @Suite struct BundledIconsTests {
-    @Test func theSeedlingRendersFromTheEmbeddedSVG() {
-        #expect(BundledIcons.image(for: FallbackIcons.seedlingID) != nil)
+    @Test func everyBundledIconRenders() {
+        for id in FallbackIcons.all + ["builtin:seedling"] where !id.hasPrefix("sf:") {
+            #expect(BundledIcons.image(for: id) != nil, "\(id) did not render")
+        }
     }
 
-    @Test func otherIdsAreNotBundled() {
+    @Test func idsThatAreNotBundledDoNotRender() {
         #expect(BundledIcons.image(for: "sf:timer") == nil)
         #expect(BundledIcons.image(for: "mdi:coffee") == nil)
+        #expect(BundledIcons.image(for: "hugeicons:something-else") == nil)
     }
 }
-

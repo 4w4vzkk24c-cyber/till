@@ -30,6 +30,17 @@ import Testing
         #expect(icons.fetched.isEmpty)
     }
 
+    @Test func pickingABundledIconNeverTouchesTheNetwork() async throws {
+        let icons = MockIcons()
+        let (h, f) = try make(icons)
+        f.selectIcon(IconChoice(id: "logos:claude-icon", monotone: false, collectionName: "SVG Logos", licenseTitle: "CC0"))
+        f.input = "in 5 min"
+        await f.submit()
+        #expect(h.store.chips.first?.iconId == "logos:claude-icon")
+        #expect(h.store.chips.first?.iconMonotone == false)
+        #expect(icons.fetched.isEmpty)
+    }
+
     @Test func pickedIconIsFetchedAtCreationAndItsDetectedFlagWins() async throws {
         let icons = MockIcons(fetch: .success(asset("logos:apple", monotone: false)))
         let (h, f) = try make(icons)
