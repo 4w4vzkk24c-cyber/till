@@ -47,3 +47,15 @@
 ## A1.5 Open question for the operator
 
 - **[open] Initial focus.** Focus the add field when the popover opens (`.accessibilityDefaultFocus`, available at the floor) or leave focus to the system. r3.1 is silent. Default until decided: focus the add field.
+
+## A1.6 Parser and display interpretations made in the first code pass
+
+The grammar in §7.1 and the formats in §4 leave these cases open. The code takes the following readings; each is pinned by a test and is **[open]** for operator veto.
+
+1. **Attached single term** `in 20m` is accepted alongside `in 20 min`; `in 1h30m`, `in 1h 30m` and `in 1 h 30 m` are the compound error. Singular `minute`/`hour`/`day` units are accepted.
+2. **Plain date on today's date** (`Nov 3` typed on Nov 3) stays this year rather than rolling to next year. The 09:00 suggestion may already be past, so the time prompt's result is validated by `NaturalDeadline.applyingTime`, which rejects a moment ≤ now with "already passed". Dates before today roll to next year; Feb 29 resolves to the next leap year; impossible dates (`Feb 30`, `Apr 31`) are an inline error.
+3. **Weekday equal to today:** later today stays today; a time ≤ now rolls to next week.
+4. **Overdue ≥ 24 h** renders in hours (`+50h overdue`); §4 specifies only `+2h` and `+41m` forms.
+5. **Seconds floor** in `M:SS`; at remaining 0 < r < 1 s the display is `0:00` and the chip is not yet overdue (overdue begins at deadline ≤ now).
+6. **Tie-break "nearest deadline"** means the smallest `deadline` value (for overdue chips, the longest overdue), then `id`. It affects only which chip is the bar's driver, not the bar's tint or badge.
+7. **`barEscalation` takes all chips** and excludes paused ones itself, rather than receiving a pre-filtered active list, so "all paused" cannot be mishandled by a caller.
