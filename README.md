@@ -7,8 +7,12 @@ mark them done. SwiftUI and SwiftData, Swift 6, no third-party code dependencies
 sync.
 
 <p align="center">
-  <img src="docs/images/popover.png" alt="Till's popover: a deadline field with an icon button and a gear menu above four countdown tiles showing 1d 1h, 1d 3h, 2d 12h and 24d 7h, each with a pause control" width="360">
+  <img src="docs/images/popover.png" alt="Till's popover in dark appearance: a deadline field with an icon button and a gear menu above four countdown tiles showing 1d 1h, 1d 3h, 2d 12h and 24d 7h, each with a pause control" width="340">
+  &nbsp;
+  <img src="docs/images/popover-light.png" alt="Till's popover in light appearance with a red overdue tile showing +0m and a Done button, an amber-outlined tile counting down 13:51, and two counting tiles; the menu bar icon is red with the count 1" width="340">
 </p>
+
+<p align="center"><sub>Dark and light appearance. The light one shows the overdue tile, the due-soon outline, and the red menu-bar icon with its count.</sub></p>
 
 ## Build and test
 
