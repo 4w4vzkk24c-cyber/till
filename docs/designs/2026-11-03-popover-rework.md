@@ -49,4 +49,8 @@ Hero text is the normative `HeroTime` string. Overdue renders `+41m overdue` as 
 4. Footer toggles and Quit move into the gear menu.
 
 ## Not in this pass
-Bar-icon glyph (stays the SF `timer` symbol), custom pixel icon sets, animation of any kind, light-mode mock.
+Custom pixel icon sets, animation of any kind, light-mode mock.
+
+## Menu-bar glyph (operator decision, 2026-11-03, after the mock)
+The bar glyph changes from the SF `timer` symbol to Font Awesome 5 Solid `seedling` (Iconify `fa-solid:seedling`, CC BY 4.0). Still one static glyph with the same four tint variants and overdue count (design §6). It is bundled as an embedded SVG (`BarGlyph`), rasterized once at launch and tinted for amber/red, so there is no network call; if rasterizing ever fails the bar falls back to the SF `timer`. Attribution is required (see `THIRD_PARTY_NOTICES.md`); an in-app or download-page credit is still to be added before shipping.
+

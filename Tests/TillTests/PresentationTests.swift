@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Till
@@ -5,7 +6,7 @@ import Testing
 @Suite struct BarIconPresentationTests {
     @Test func normalIsTemplateWithoutCount() {
         let p = BarIconPresentation(.normal)
-        #expect(p.tint == .template && p.countText == nil && p.symbolName == "timer")
+        #expect(p.tint == .template && p.countText == nil && p.glyphName == "seedling")
     }
 
     @Test func amberHasNoCount() {
@@ -26,7 +27,7 @@ import Testing
 
     @Test func oneGlyphForEveryState() {
         let states: [BarIconState] = [.normal, .amber, .red(overdueCount: 1), .dimmed]
-        #expect(Set(states.map { BarIconPresentation($0).symbolName }).count == 1)
+        #expect(Set(states.map { BarIconPresentation($0).glyphName }).count == 1)
     }
 }
 
@@ -127,5 +128,26 @@ import Testing
         mock.status = .enabled                       // user flipped it in System Settings
         c.refresh()
         #expect(c.isOn)
+    }
+}
+
+@Suite struct BarGlyphTests {
+    @Test func svgIsSelfContainedAndWhite() {
+        #expect(BarGlyph.seedlingSVG.contains("<svg"))
+        #expect(BarGlyph.seedlingSVG.contains("#ffffff"))
+        #expect(!BarGlyph.seedlingSVG.contains("currentColor"))
+    }
+
+    @Test func nameMatchesThePresentation() {
+        #expect(BarGlyph.name == "seedling")
+        #expect(BarIconPresentation(.normal).glyphName == BarGlyph.name)
+    }
+
+    @Test func rasterizesToAnExactSquareWithTransparency() throws {
+        let png = try SVGRasterizer.pngData(from: Data(BarGlyph.seedlingSVG.utf8), pixels: 64)
+        let rep = try #require(NSBitmapImageRep(data: png))
+        #expect(rep.pixelsWide == 64 && rep.pixelsHigh == 64)
+        let corner = try #require(rep.colorAt(x: 0, y: 63))   // bottom-left of the seedling's box is empty
+        #expect(corner.alphaComponent < 0.1)
     }
 }
