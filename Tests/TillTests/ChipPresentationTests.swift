@@ -3,13 +3,6 @@ import Testing
 @testable import Till
 
 @Suite struct ChipPresentationTests {
-    @Test func captionsSayTheState() {
-        #expect(ChipPresentation(state: .clean, heroText: "12:40").caption == nil)
-        #expect(ChipPresentation(state: .approaching, heroText: "4:12").caption == "due soon")
-        #expect(ChipPresentation(state: .overdue, heroText: "+41m overdue").caption == "overdue")
-        #expect(ChipPresentation(state: .paused, heroText: "14h 32m").caption == "paused")
-    }
-
     @Test func surfaceAndControlFollowState() {
         let cases: [(ChipState, ChipPresentation.Surface, ChipPresentation.Control)] = [
             (.clean, .neutral, .pause), (.approaching, .dueSoon, .pause),
@@ -39,7 +32,7 @@ import Testing
             id: UUID(), deadline: now.addingTimeInterval(-(41 * 60 + 5)), approachWindow: 1800)
         let p = ChipPresentation(
             state: DeadlineState.state(of: chip, at: now), heroText: HeroTime.format(chip: chip, at: now))
-        #expect(p.hero == "+41m" && p.caption == "overdue")
+        #expect(p.hero == "+41m" && p.surface == .overdue)
     }
 }
 

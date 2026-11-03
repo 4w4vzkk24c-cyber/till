@@ -9,25 +9,24 @@ struct ChipPresentation: Equatable {
 
     let surface: Surface
     let hero: String
-    let caption: String?
     let control: Control
 
     init(state: ChipState, heroText: String) {
         switch state {
         case .clean:
-            surface = .neutral; caption = nil; control = .pause
+            surface = .neutral; control = .pause
             hero = heroText
         case .approaching:
-            surface = .dueSoon; caption = "due soon"; control = .pause
+            surface = .dueSoon; control = .pause
             hero = heroText
         case .overdue:
-            // "+41m overdue" renders as hero "+41m" with the caption "overdue": a split of
-            // the normative HeroTime string, not a format change.
-            surface = .overdue; caption = "overdue"; control = .done
+            // "+41m overdue" renders as hero "+41m": the red fill, the "+" and the Done
+            // control say "overdue", so the word is dropped from the digits to fit the tile.
+            surface = .overdue; control = .done
             let suffix = " overdue"
             hero = heroText.hasSuffix(suffix) ? String(heroText.dropLast(suffix.count)) : heroText
         case .paused:
-            surface = .paused; caption = "paused"; control = .resume
+            surface = .paused; control = .resume
             hero = heroText
         }
     }
@@ -38,9 +37,9 @@ struct ChipPresentation: Equatable {
 /// opened too short and clipped the tiles. The height is computed from the chip count, and
 /// capped so long lists scroll.
 enum ChipGridLayout {
-    static let tileHeight: CGFloat = 152
+    static let tileHeight: CGFloat = 128
     static let gap: CGFloat = 8
-    static let maxHeight: CGFloat = 480        // three full rows (472) with room to spare
+    static let maxHeight: CGFloat = 408        // three full rows (400) with room to spare
 
     static func height(forChips count: Int) -> CGFloat {
         guard count > 0 else { return 0 }

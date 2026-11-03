@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One chip tile (spec A2): icon, label, hero digits, a caption that says the state in
-/// words, and a full-width control strip. Fill and outline carry state; the chip's accent
+/// One chip tile (spec A2): icon, hero digits, a full-width control strip, and the label
+/// under it. Fill and outline carry state; the chip's accent
 /// colours its icon only. Static: no animation, state changes swap.
 struct ChipCardView: View {
     let data: ChipViewData
@@ -25,14 +25,6 @@ struct ChipCardView: View {
                 tint: overdue ? .white : theme.accent(data.accentHex))
                 .frame(width: 40, height: 40)
                 .opacity(p.surface == .paused ? 0.5 : 1)
-                .padding(.bottom, 2)
-
-            // The label slot is always reserved so an unlabeled chip keeps the tile height.
-            Text(data.label ?? "")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(labelColor(p.surface, theme))
-                .lineLimit(1)
-                .frame(height: 16)
 
             Text(p.hero)
                 .font(.system(size: 26, weight: .bold, design: .monospaced))
@@ -41,15 +33,17 @@ struct ChipCardView: View {
                 .minimumScaleFactor(0.7)
                 .frame(height: 28)
 
-            Text(p.caption ?? " ")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(captionColor(p.surface, theme))
-                .frame(height: 14)
-
-            Spacer(minLength: 0)
             controlStrip(p, theme)
+
+            // The label sits under the control. Its slot is always reserved so an
+            // unlabeled chip keeps the tile height.
+            Text(data.label ?? "")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(labelColor(p.surface, theme))
+                .lineLimit(1)
+                .frame(height: 14)
         }
-        .padding(.top, 10)
+        .padding(.top, 8)
         .padding(.horizontal, 6)
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity)
@@ -109,15 +103,6 @@ struct ChipCardView: View {
         }
     }
 
-    private func captionColor(_ s: ChipPresentation.Surface, _ theme: Theme) -> Color {
-        switch s {
-        case .neutral: return .clear
-        case .dueSoon: return theme.amber
-        case .overdue: return .white
-        case .paused: return theme.ink3
-        }
-    }
-
     // MARK: - Control
 
     /// Pause / resume, or Done on an overdue tile (Done is the only exit from Overdue,
@@ -134,7 +119,7 @@ struct ChipCardView: View {
             }
             .foregroundStyle(p.control == .done ? Color.white : theme.ink)
             .frame(maxWidth: .infinity)
-            .frame(height: 28)
+            .frame(height: 26)
             .background(
                 p.control == .done ? Color.black.opacity(0.28) : Color.clear,
                 in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))

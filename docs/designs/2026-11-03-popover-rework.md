@@ -9,20 +9,20 @@
 ## Principles
 1. One object, repeated: every chip is the same tile.
 2. Fill carries state; accent colour carries identity. Counting tiles are neutral; the chip's accent appears on its icon only. Amber and red mean state and nothing else.
-3. State is never colour alone: a caption under the digits says it in words.
+3. Fill and outline carry state; the control glyph and a `+` in the time back them up (the `due soon` caption was removed by the operator).
 4. Static: no animation, no spinner, no transition (design §4 stands).
 
-## Chip tile (156 pt wide at the 340 pt popover, ~152 pt tall)
-Order, centered: icon 40 pt, label (12 pt medium, one line, slot reserved even when empty), hero digits (26 pt bold, monospaced, `minimumScaleFactor` 0.7), caption slot (12 pt semibold, 14 pt reserved), control strip (full-width hit target, 28 pt tall).
+## Chip tile (156 pt wide at the 340 pt popover, 128 pt tall)
+Operator revision 2026-11-03 (compact tile, no captions): order, centered: icon 40 pt, hero digits (26 pt bold, monospaced, `minimumScaleFactor` 0.7), full-width control strip (26 pt), then the optional label under the control (12 pt medium, one line, slot always reserved so an unlabeled chip keeps the height). There is no caption row in any state.
 
-| State | Surface | Caption | Control |
-|---|---|---|---|
-| Counting (clean) | neutral translucent fill, hairline | none | pause |
-| Approaching | neutral fill + 2 pt amber outline; digits and caption amber | `due soon` | pause |
-| Overdue | solid red `#CF2F36`; white icon, digits, caption | `overdue` | `Done` (replaces pause; strip filled black 28%) |
-| Paused | no fill, 1.5 pt dashed outline; dimmed icon and digits | `paused` | resume |
+| State | Surface | Control |
+|---|---|---|
+| Counting (clean) | neutral translucent fill, hairline | pause |
+| Approaching | neutral fill + 2 pt amber outline; digits amber | pause |
+| Overdue | solid red `#CF2F36`; white icon, digits, label | `Done` (replaces pause; strip filled black 28%) |
+| Paused | no fill, 1.5 pt dashed outline; dimmed icon and digits | resume |
 
-Hero text is the normative `HeroTime` string. Overdue renders `+41m overdue` as hero `+41m` plus caption `overdue` (a rendering split, not a format change). VoiceOver label (`Spoken`) is unchanged.
+State still never relies on colour alone except Approaching, which is amber outline plus amber digits (VoiceOver announces it through `Spoken`; the operator removed the `due soon` caption). Overdue is also carried by the `+` in the time and the Done control; paused by the play glyph and the dashed outline. Hero text is the normative `HeroTime` string; overdue renders `+41m overdue` as `+41m`. VoiceOver label (`Spoken`) is unchanged.
 
 ## Colour
 - Accent palette (new chips only; stored chips keep their stored hex): `#6FCFFF #8FE0A0 #D2A4FF #FF93C9 #5EE0CF #A8B1FF`. Hues must stay out of the state hues (0–60° and 340–360°). Each reads at >= 3:1 on the dark tile (`#445D8E` reference).
@@ -34,7 +34,7 @@ Hero text is the normative `HeroTime` string. Overdue renders `+41m overdue` as 
 ## Popover
 - Width 340 (unchanged). Padding 10, tile gap 8, concentric radii: tile 20, control 12, field pill 20. The window's own corner radius is system-controlled; tile radius is a single constant to tune after seeing it on the Mac.
 - Surface: system window material with a blue-ish tint overlay. Reduce Transparency: opaque tint. Increase Contrast: stronger hairline and tile fill.
-- The chip grid has an explicit height from the chip count (`ChipGridLayout`): rows x 152 pt plus 8 pt gaps, capped at 480 pt so three full rows (472 pt) fit and longer lists scroll. An explicit height is required because the menu-bar window sizes from natural height and a `ScrollView` with only a maximum collapses (observed 2026-11-03). The earlier "470" cap was an arithmetic slip: three rows need 472.
+- The chip grid has an explicit height from the chip count (`ChipGridLayout`): rows x 128 pt plus 8 pt gaps, capped at 408 pt so three full rows (400 pt) fit and longer lists scroll. An explicit height is required because the menu-bar window sizes from natural height and a `ScrollView` with only a maximum collapses (observed 2026-11-03). The earlier "470" cap was an arithmetic slip: three rows of the then 152 pt tiles needed 472.
 - **Composer** (replaces the two fields, the icon row and the footer): one pill with a leading 26 pt icon tile button, the deadline field (`in 20 min, Fri 5pm`), and a right-aligned label field with a visible `Label` placeholder; the gear sits beside it. Below it, one status line.
 - **Status line precedence:** error, then `Fetching icon…`, then editing note (`Editing. Leave the deadline blank to keep it.` with Cancel), then parse echo. The time prompt (`At what time?`, time picker, Set, Cancel) keeps its current behavior and is drawn as a row in the same style. **Edit mode, the time prompt and error styling are not in the mock;** they reuse the field row and status-line styles and need operator review.
 - **Parse echo** (new, pure): `Friday 5:00 PM, in 3 d 7 h`; date-only input reads `Nov 15, then you pick a time`; unparseable or past input shows nothing (the error still appears on submit).
