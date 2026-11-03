@@ -52,7 +52,7 @@
 
 The grammar in §7.1 and the formats in §4 leave these cases open. The code takes the following readings; each is pinned by a test and is **[open]** for operator veto.
 
-1. **Attached single term** `in 20m` is accepted alongside `in 20 min`; `in 1h30m`, `in 1h 30m` and `in 1 h 30 m` are the compound error. Singular `minute`/`hour`/`day` units are accepted.
+1. **Attached single term** `in 20m` is accepted alongside `in 20 min`; `in 1h30m`, `in 1h 30m` and `in 1 h 30 m` were the compound error (superseded 2026-11-03: see A2 parser note, compound durations are now accepted). Singular `minute`/`hour`/`day` units are accepted.
 2. **Plain date on today's date** (`Nov 3` typed on Nov 3) stays this year rather than rolling to next year. The 09:00 suggestion may already be past, so the time prompt's result is validated by `NaturalDeadline.applyingTime`, which rejects a moment ≤ now with "already passed". Dates before today roll to next year; Feb 29 resolves to the next leap year; impossible dates (`Feb 30`, `Apr 31`) are an inline error.
 3. **Weekday equal to today:** later today stays today; a time ≤ now rolls to next week.
 4. **Overdue ≥ 24 h** renders in hours (`+50h overdue`); §4 specifies only `+2h` and `+41m` forms.

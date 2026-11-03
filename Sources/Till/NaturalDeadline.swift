@@ -21,7 +21,7 @@ public struct ParsedDeadline: Sendable, Equatable {
 public enum NaturalDeadlineError: Error, Equatable, Sendable {
     case empty
     case unrecognized
-    case compoundDuration
+    case repeatedUnit
     case nonPositiveAmount
     case amountTooLarge
     case missingTime
@@ -34,7 +34,7 @@ public enum NaturalDeadlineError: Error, Equatable, Sendable {
         switch self {
         case .empty: return "Try “in 20 min”, “Fri 5pm” or “Nov 15”."
         case .unrecognized: return "Try “in 20 min”, “Fri 5pm” or “Nov 15”."
-        case .compoundDuration: return "Use a single unit, e.g. “in 90 min”."
+        case .repeatedUnit: return "Use each unit once, e.g. “1 day 2 hours”."
         case .nonPositiveAmount: return "Use an amount of 1 or more."
         case .amountTooLarge: return "That amount is too large."
         case .missingTime: return "Add a time, e.g. “Fri 5pm” or “tomorrow 9am”."
@@ -66,6 +66,11 @@ public enum NaturalDeadline {
 
         if first == "in" {
             return try parseQuick(rest, now: now, calendar: cal)
+        }
+        // "in" is optional: input that starts with a digit is a duration ("90 min",
+        // "1 day 2 hours", "1h30m").
+        if first.first.map(isDigit) == true {
+            return try parseQuick(tokens, now: now, calendar: cal)
         }
         if first == "today" || first == "tomorrow" {
             let (hour, minute) = try parseClock(rest)
@@ -120,48 +125,52 @@ public enum NaturalDeadline {
             timePromptRequired: false)
     }
 
-    // MARK: - Quick: in <N> <unit>
+    // MARK: - Quick: [in] <N> <unit> [<N> <unit> ...]
 
+    /// One or more amount/unit pairs, each unit at most once, in any order: "20 min",
+    /// "1h30m", "1 day 2 hours", "1 hour and 30 minutes", "1 hour, 30 minutes". The pairs
+    /// are added in one calendar step, so days keep wall-clock time across DST.
     private static func parseQuick(_ args: [String], now: Date, calendar cal: Calendar) throws -> ParsedDeadline {
-        let amountText: String
-        let unitText: String
-        switch args.count {
-        case 0:
-            throw NaturalDeadlineError.unrecognized
-        case 1:
-            // Attached form, e.g. "20m". "1h30m" is a compound -> error.
-            let token = args[0]
-            let digits = token.prefix(while: isDigit)
-            let tail = token.dropFirst(digits.count)
-            guard !digits.isEmpty, !tail.isEmpty else { throw NaturalDeadlineError.unrecognized }
-            if tail.contains(where: isDigit) { throw NaturalDeadlineError.compoundDuration }
-            amountText = String(digits)
-            unitText = String(tail)
-        case 2:
-            amountText = args[0]
-            unitText = args[1]
-            if !amountText.allSatisfy(isDigit) {
-                if amountText.first.map(isDigit) == true { throw NaturalDeadlineError.compoundDuration }
-                throw NaturalDeadlineError.unrecognized
+        let text = args.filter { $0 != "and" }
+            .joined(separator: " ")
+            .replacingOccurrences(of: ",", with: " ")
+        let chars = Array(text)
+        var i = 0
+        func skipSpaces() { while i < chars.count, chars[i].isWhitespace { i += 1 } }
+
+        var components = DateComponents()
+        var seen = Set<Calendar.Component>()
+        skipSpaces()
+        guard i < chars.count else { throw NaturalDeadlineError.unrecognized }
+
+        while i < chars.count {
+            guard isDigit(chars[i]) else { throw NaturalDeadlineError.unrecognized }
+            var digits = ""
+            while i < chars.count, isDigit(chars[i]) { digits.append(chars[i]); i += 1 }
+            skipSpaces()
+            var unit = ""
+            while i < chars.count, chars[i].isLetter { unit.append(chars[i]); i += 1 }
+            guard !unit.isEmpty else { throw NaturalDeadlineError.unrecognized }
+
+            guard digits.count <= 6, let amount = Int(digits) else {
+                throw NaturalDeadlineError.amountTooLarge
             }
-        default:
-            throw NaturalDeadlineError.compoundDuration
+            guard amount > 0 else { throw NaturalDeadlineError.nonPositiveAmount }
+            guard amount <= maxAmount else { throw NaturalDeadlineError.amountTooLarge }
+
+            let component: Calendar.Component
+            switch unit {
+            case "min", "m", "mins", "minute", "minutes": component = .minute
+            case "h", "hr", "hour", "hours": component = .hour
+            case "d", "day", "days": component = .day
+            default: throw NaturalDeadlineError.unrecognized
+            }
+            guard seen.insert(component).inserted else { throw NaturalDeadlineError.repeatedUnit }
+            components.setValue(amount, for: component)
+            skipSpaces()
         }
 
-        guard amountText.count <= 6, let amount = Int(amountText) else {
-            throw NaturalDeadlineError.amountTooLarge
-        }
-        guard amount > 0 else { throw NaturalDeadlineError.nonPositiveAmount }
-        guard amount <= maxAmount else { throw NaturalDeadlineError.amountTooLarge }
-
-        let component: Calendar.Component
-        switch unitText {
-        case "min", "m", "mins", "minute", "minutes": component = .minute
-        case "h", "hr", "hour", "hours": component = .hour
-        case "d", "day", "days": component = .day
-        default: throw NaturalDeadlineError.unrecognized
-        }
-        guard let deadline = cal.date(byAdding: component, value: amount, to: now) else {
+        guard let deadline = cal.date(byAdding: components, to: now) else {
             throw NaturalDeadlineError.unrecognized
         }
         return ParsedDeadline(

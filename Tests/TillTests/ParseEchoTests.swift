@@ -16,6 +16,10 @@ import Testing
 
     @Test func hoursAndMinutes() { #expect(echo("in 90 min") == "Today 11:30 AM, in 1 h 30 min") }
 
+    @Test func compoundDurationWithoutIn() {
+        #expect(echo("1 day 2 hours") == "Tomorrow 12:00 PM, in 1 d 2 h")
+    }
+
     @Test func dateOnlyAsksForATimeNext() { #expect(echo("Nov 15") == "Nov 15, then you pick a time") }
 
     @Test func hostileInputShowsNothing() {                    // Review Focus 3

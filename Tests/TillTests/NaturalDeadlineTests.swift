@@ -49,9 +49,47 @@ import Testing
         #expect(p.deadline.timeIntervalSince(now) == 25 * 3600)
     }
 
-    @Test(arguments: ["in 1h30m", "in 1h 30m", "in 1 h 30 m"])
-    func compoundIsAnError(_ input: String) {
-        #expect(throws: NaturalDeadlineError.compoundDuration) { try parse(input) }
+    @Test(arguments: [
+        "in 1h30m", "in 1h 30m", "in 1 h 30 m", "in 1 hour 30 minutes", "in 1 hour and 30 minutes",
+        "in 1 hour, 30 minutes", "1h30m", "1 hour 30 min", "in 30 min 1 hour",
+    ])
+    func compoundDurations(_ input: String) throws {
+        let p = try parse(input)
+        #expect(p.deadline == C.now.addingTimeInterval(90 * 60))
+        #expect(p.kind == .quick && p.approachWindow == 1800 && !p.timePromptRequired)
+    }
+
+    @Test func compoundWithDays() throws {
+        #expect(try parse("in 1 day 2 hours").deadline == C.at(2026, 11, 4, 12, 0))
+        #expect(try parse("1 day 2 hours").deadline == C.at(2026, 11, 4, 12, 0))
+        #expect(try parse("1d 2h 15m").deadline == C.at(2026, 11, 4, 12, 15))
+    }
+
+    @Test func compoundDayAcrossSpringForwardKeepsWallClock() throws {
+        let now = C.at(2026, 3, 7, 12, 0)
+        let p = try parse("in 1 day 2 hours", now: now)
+        #expect(p.deadline == C.at(2026, 3, 8, 14, 0))
+        #expect(p.deadline.timeIntervalSince(now) == 25 * 3600)
+    }
+
+    @Test(arguments: ["20 min", "20m", "3 days", "IN 3 days", "  2 hours "])
+    func inIsOptional(_ input: String) throws {
+        #expect(try parse(input).kind == .quick)
+    }
+
+    @Test(arguments: ["in 1 hour 2 hours", "in 5 min 5 min", "1h 2h", "in 1 h 30 min 5 m"])
+    func repeatedUnitIsAnError(_ input: String) {
+        #expect(throws: NaturalDeadlineError.repeatedUnit) { try parse(input) }
+    }
+
+    @Test(arguments: ["20", "20 min extra", "5 5 min", "min 5", "5pm", "in 1 hour 30"])
+    func malformedDurationsStayUnrecognized(_ input: String) {
+        #expect(throws: NaturalDeadlineError.unrecognized) { try parse(input) }
+    }
+
+    @Test func eachAmountIsStillValidated() {
+        #expect(throws: NaturalDeadlineError.nonPositiveAmount) { try parse("in 1 hour 0 min") }
+        #expect(throws: NaturalDeadlineError.amountTooLarge) { try parse("in 1 hour 100001 min") }
     }
 
     @Test func quickErrors() {
@@ -70,7 +108,7 @@ import Testing
 
     @Test func everyErrorHasAHint() {
         let all: [NaturalDeadlineError] = [
-            .empty, .unrecognized, .compoundDuration, .nonPositiveAmount, .amountTooLarge,
+            .empty, .unrecognized, .repeatedUnit, .nonPositiveAmount, .amountTooLarge,
             .missingTime, .invalidTime, .invalidDate, .alreadyPassed,
         ]
         for e in all { #expect(!e.hint.isEmpty) }
