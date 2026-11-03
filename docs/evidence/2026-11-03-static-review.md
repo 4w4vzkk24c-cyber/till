@@ -52,3 +52,15 @@ bash "$HOME/.agents/skills/cofounder-macos-development/scripts/capture-build.sh"
   CODE_SIGNING_ALLOWED=NO test
 ```
 The result is "passed" only with the captured exit status and logs. A failure in the first compile is expected to be possible: this code has never seen a compiler.
+
+## Update 2 — TimerStore pass (cloud session, NOT compiled, NOT run)
+Added after the Mac run above; none of the following has been compiled or tested anywhere yet.
+
+| File | Purpose |
+|---|---|
+| `Sources/Till/Store/ChipEntity.swift` | `@Model ChipEntity`, `TillSchemaV1`, `TillPersistence.makeContainer` (in-memory / on-disk) |
+| `Sources/Till/Store/NotificationScheduling.swift` | main-actor protocol seam + `SystemNotificationScheduler` (real `UNUserNotificationCenter`; no tests, no delegate wiring) |
+| `Sources/Till/Store/TimerStore.swift` | `@MainActor @Observable` store: create/done/pause/resume/edit, toggle, authorization watcher, single-flight reconciliation |
+| `Tests/TillTests/TimerStoreTests.swift`, `MockScheduler.swift` | ~37 swift-testing cases against an in-memory SwiftData container and a mock scheduler, plus one on-disk reopen test |
+
+Highest-risk guesses (most likely first compile/test failures): SwiftData `rollback()` restoring a pending delete/insert (tests `failedSaveOn*`), `TillSchemaV1.versionIdentifier` as `static let` under Swift 6, `#expect(throws:)` with async main-actor closures, on-disk store reopen in one process, and Swift 6 Sendable diagnostics around the `@MainActor` closure properties. Failures in these are expected to be informative, not necessarily bugs in the design.

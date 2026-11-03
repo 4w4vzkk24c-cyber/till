@@ -83,10 +83,10 @@ struct Harness {
 
     @Test func persistHappensBeforeSchedule() async throws {
         let h = try Harness()
-        var chipsAtSchedule: Int?
-        h.scheduler.onSchedule = { chipsAtSchedule = h.store.chips.count }
+        let chipsAtSchedule = Box<Int?>(nil)
+        h.scheduler.onSchedule = { chipsAtSchedule.value = h.store.chips.count }
         try await h.create(in: 3600)
-        #expect(chipsAtSchedule == 1)
+        #expect(chipsAtSchedule.value == 1)
     }
 
     @Test func schedulingFailureDoesNotFailCreation() async throws {
@@ -127,7 +127,7 @@ struct Harness {
     @Test func reloadFromSameContainer() async throws {
         let h = try Harness()
         let id = try await h.create(in: 3600, label: "Keep")
-        let second = try TimerStore(
+        let second = TimerStore(
             container: h.container, scheduler: MockScheduler(), defaults: h.defaults,
             clock: { h.clock.now })
         try await second.start()
@@ -277,7 +277,7 @@ struct Harness {
         h.clock.now = h.clock.now.addingTimeInterval(120)   // `soon` is now overdue
         await h.store.setNotificationsEnabled(true)
         #expect(h.scheduler.scheduled.map(\.id) == [future])
-        _ = soon
+        #expect(!h.scheduler.scheduled.map(\.id).contains(soon))
     }
 
     @Test func toggleOffRemovesAllPending() async throws {
@@ -388,14 +388,12 @@ struct Harness {
         #expect(h.store.chips.isEmpty)
     }
 
-    @Test func chipPausedDuringReconciliationAwaitsIsSkipped() async throws {
+    @Test func chipEditedIntoFutureDuringReconciliationAwaitsIsSkipped() async throws {
         let h = try Harness()
         let a = try await h.create(in: 60)
         let b = try await h.create(in: 90)
-        h.clock.now = h.clock.now.addingTimeInterval(30)
-        // Both are still in the future; make them overdue only after pausing b is impossible
-        // (overdue cannot be paused), so instead edit b into the future mid-pass.
-        h.clock.now = h.clock.now.addingTimeInterval(120)
+        h.clock.now = h.clock.now.addingTimeInterval(150)   // both overdue
+        // Mid-pass, the user moves b's deadline into the future: it must not be notified.
         h.scheduler.onPendingRead = {
             try? await h.store.edit(id: b, label: nil, deadline: h.parsed(in: 3600))
         }
@@ -408,10 +406,10 @@ struct Harness {
         let h = try Harness()
         let id = try await h.create(in: 60)
         h.clock.now = h.clock.now.addingTimeInterval(120)
-        var nested = false
+        let nested = Box(false)
         h.scheduler.onPendingRead = {
-            if !nested {
-                nested = true
+            if !nested.value {
+                nested.value = true
                 await h.store.reconcile()               // arrives mid-pass: rerun, not a 2nd pass
             }
         }

@@ -59,3 +59,14 @@ The grammar in §7.1 and the formats in §4 leave these cases open. The code tak
 5. **Seconds floor** in `M:SS`; at remaining 0 < r < 1 s the display is `0:00` and the chip is not yet overdue (overdue begins at deadline ≤ now).
 6. **Tie-break "nearest deadline"** means the smallest `deadline` value (for overdue chips, the longest overdue), then `id`. It affects only which chip is the bar's driver, not the bar's tint or badge.
 7. **`barEscalation` takes all chips** and excludes paused ones itself, rather than receiving a pre-filtered active list, so "all paused" cannot be mishandled by a caller.
+
+## A1.7 TimerStore decisions made in the first store pass
+
+Each is **[open]** for operator veto and is pinned by a test.
+
+1. **Delivered wins when a request is in both lists.** The pass reads pending, then delivered. If a chip's id is in both (the request moved pending → delivered between the two non-atomic reads), the chip is treated as delivered: pending is removed, nothing fires, the flag is set. This closes the pending→delivered re-fire window named in §2/§7.4/§8; the delivered-and-dismissed-before-observation window remains and is still bounded at one re-fire.
+2. **Editing a paused chip keeps it paused.** The edited deadline becomes its frozen remaining time measured from the moment of the edit (`pausedAt = now`, `deadline = new value`); no trigger is scheduled until resume. §7.5 says Edit covers label and deadline but does not say what that means for a paused chip.
+3. **Edit and resume reset `zeroCrossingHandled`** (a new deadline is a new crossing).
+4. **Failed notification delivery in reconciliation leaves the flag false** and stops the pass, so the next pass retries; a failed save after a successful delivery would therefore re-fire once. The alternative (save the flag first) risks a lost notification, which the seed forbids.
+5. **Notification text:** title is the chip label, or "Timer" when blank; body "Time’s up".
+6. **Not in this pass:** the display tick loop (§7.4), the `UNUserNotificationCenter` delegate wiring (it must call `TimerStore.handleDeliveryObserved`), the `DidWakeMessage` / `didBecomeActive` observers that call `reconcile()` / `refreshAuthorization()`, and all views.

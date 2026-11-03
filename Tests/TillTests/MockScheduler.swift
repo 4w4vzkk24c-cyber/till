@@ -12,6 +12,12 @@ final class FailureSwitch {
     var failSaves = false
 }
 
+@MainActor
+final class Box<Value> {
+    var value: Value
+    init(_ value: Value) { self.value = value }
+}
+
 struct SaveFailure: Error {}
 struct ScheduleFailure: Error {}
 
