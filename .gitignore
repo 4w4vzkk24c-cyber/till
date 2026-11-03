@@ -3,3 +3,4 @@ _task-context-archive/
 .build/
 *.xcodeproj
 Sources/Till/Info.plist
+artifacts/
