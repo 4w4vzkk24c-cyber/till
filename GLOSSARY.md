@@ -9,7 +9,7 @@ surfaces them. One vocabulary, used in code, design docs, and UI copy alike.
 ### Chips and deadlines
 
 **Chip**:
-A single countdown tile in the popover: one deadline, one icon, one label. The unit the whole app reasons about.
+A single countdown tile in the popover: one deadline, one icon. The unit the whole app reasons about. (Chips have no label; the icon is the subject.)
 _Avoid_: timer, tile, entry, reminder
 
 **Deadline**:
