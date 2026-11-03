@@ -19,6 +19,12 @@ import Testing
         }
     }
 
+    @Test func theAppIconIsCreditedToItsAuthor() {
+        let text = Credits.text()
+        #expect(text.contains("Seedling icons created by Umeicon - Flaticon"))
+        #expect(text.contains("https://www.flaticon.com/free-icons/seedling"))
+    }
+
     @Test func theTextNamesEveryAuthorAndLicense() {
         let text = Credits.text()
         for author in ["Hugeicons", "Evergrow", "Valentin Fossati", "Emoji One", "Dave Gandy", "Gil Barbara"] {

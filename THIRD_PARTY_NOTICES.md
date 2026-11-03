@@ -3,6 +3,15 @@
 Till has no third-party code dependencies. It bundles third-party icon artwork and fetches
 more at the user's request.
 
+## App icon
+
+The app icon artwork is the seedling from "Seedling icons created by Umeicon - Flaticon"
+(https://www.flaticon.com/free-icons/seedling). The original 512 px artwork is kept at
+`Design/AppIcon/seedling-umeicon-512.png`; `Design/AppIcon/make_icon.py` upscales it, sets it on a
+rounded-square plate and writes the icon set in `Sources/Till/Assets.xcassets/AppIcon.appiconset`.
+Flaticon's free license asks for this attribution wherever the icon is used: it is in the README
+and in the app's About panel. The license terms themselves have not been reviewed here.
+
 ## Bundled icons (offline defaults)
 
 Embedded as SVG in `Sources/Till/Views/BundledIconCatalog.swift` and `BarGlyph.swift`.

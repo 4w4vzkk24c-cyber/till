@@ -13,6 +13,10 @@ struct CreditEntry: Equatable {
 }
 
 enum Credits {
+    /// The app icon's artwork (the seedling), credited as its source asks.
+    static let appIconCredit = "Seedling icons created by Umeicon - Flaticon"
+    static let appIconURL = "https://www.flaticon.com/free-icons/seedling"
+
     static let entries: [CreditEntry] = [
         CreditEntry(
             collection: "Huge Icons", author: "Hugeicons", license: "MIT",
@@ -36,7 +40,7 @@ enum Credits {
 
     /// Plain text for the About panel.
     static func text() -> String {
-        var lines = ["Icons bundled with Till", ""]
+        var lines = ["App icon", appIconCredit, appIconURL, "", "Icons bundled with Till", ""]
         for entry in entries {
             let names = BundledIconCatalog.icons
                 .filter { $0.collection == entry.collection }
