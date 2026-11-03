@@ -111,3 +111,20 @@ New tests: `IconProviderTests.swift` (ids, colour inspector, search, fetch, offl
 6. Dismiss the popover mid-fetch (throttle the network): no chip appears and the field is usable next time.
 
 **Result of Update 4, first run (operator-reported, `artifacts/test-008`, exit 65):** after the raw-string fix the whole target compiled; `Test run with 149 tests in 19 suites failed ... with 1 issue`. 148 passed, including every `IconProvider` fetch/cache/eviction/offline-invariant test, the creation-flow icon tests and the picker model tests. The one failure was `SVGRasterizerTests.rendersAWhiteSquareWithTransparentSurroundings`: `Expectation failed: rep.pixelsWide == 256 && rep.pixelsHigh == 256 → false` (actual dimensions were not printed). Only that one issue was recorded, so the centre-opaque-white and corner-transparent checks in the same test passed, i.e. **R1 held for decode and render** (`NSImage(data:)` decodes the SVG; the rendered pixels are correct); only the output pixel size was wrong. Cause is inferred, not measured: `cgImage(forProposedRect:)` does not guarantee pixel dimensions (likely the display backing scale). Fix: always redraw into a CGContext of exactly the requested size; the test now reports the real dimensions on failure and a second test pins the aspect ratio and a 32 px size. Fix not yet verified on the Mac.
+
+## Update 5 — Popover rework and Iconify diagnostics (cloud session, UNBUILT, NOT RUN)
+Static review only: the cloud container has no Swift toolchain, so nothing below has been compiled or executed. No test result is claimed.
+
+**What changed (plan `docs/superpowers/plans/2026-11-03-popover-rework.md`, spec `docs/designs/2026-11-03-popover-rework.md`):**
+- Task 1: `IconError` gains `.offline/.tls/.timedOut` with specific hints; `IconFailure.classify`; `IconLog` (`os.Logger`, subsystem `com.crossedkeys.till`, category `icons`; logs operation, error domain/code, HTTP status only, never query/URL); `TestHostSignals` and a launch log line (category `launch`) showing which test-host signal fired. Two existing assertions in `IconProviderTests` changed from `.network` to `.offline`.
+- Task 2: `Contrast`, `HexColor.hue/adjusted`, new cool accent palette, `Theme` tokens.
+- Tasks 3/5/7 (views) plus Task 4 (`ParseEcho`): `ChipPresentation`, rewritten `ChipCardView`, `SettingsMenu` + `SettingsAttention`, `ComposerView` + `ComposerStatus`, new `ChipsPopover` (empty state, 470 pt cap, tray tint).
+- Task 6 (picker rework): **not done**, held until the live Iconify diagnostics (handoff §7.3) are back.
+
+**Measured in the cloud (labelled as such):** the numeric assertions in `ColorSystemTests` were checked against a Python replica of `HexColor.adjusted`/`Contrast` (all adjusted accents >= 3.0 on both reference tiles, hue change < 0.3 degrees, white on `#CF2F36` 5.11:1, amber caption on the light tile 4.53:1). The contrast figures quoted in the spec (4.8:1, 7.7:1, 5.6:1, 8.3:1, 3.5:1) were sampled from the rendered HTML mock on a blue gradient, **not from the real window**. Reference guidance says contrast must be tested against actual rendered backgrounds: UNVERIFIED in the app.
+
+**Expected first-compile risks:** `Menu` with `.menuStyle(.button)` inside a window-style `MenuBarExtra`; `ParseEcho` time text (`DateFormatter` short style under `en_US_POSIX` on macOS 26); `@ViewBuilder` functions returning differently typed shapes in `ChipCardView.surface`; `TextField` placeholder contrast; `FocusState<Bool>.Binding` passing; Swift 6 strict-concurrency diagnostics in the moved bindings.
+
+**UNVERIFIED on the Mac:** window corner radius vs `Theme.Radius.tile`; tray tint strength over the macOS 26 window material; light appearance (derived, never mocked); Reduce Transparency; Increase Contrast; Reduce Motion (no animation exists); VoiceOver and keyboard-only operation (Tab order across pill, gear and tiles; Esc on the time prompt); gear badge behaviour; every manual checklist item below.
+
+**Operator run (test-010) and manual checklist:** see the plan, Task 8. Record the full `Test run with N tests` line and exit status here once pasted.

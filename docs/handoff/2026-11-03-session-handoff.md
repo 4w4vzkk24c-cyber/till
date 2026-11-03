@@ -188,3 +188,11 @@ Harmless log noise in every run: `com.apple.linkd.autoShortcut` connection error
 ## 12. Swift 6 / tooling gotchas already hit or designed around
 
 `@MainActor` closure properties must not capture mutable local `var`s (use the `Box<T>` test helper); a function named like its local result (`let content = content(for:)`, `guard let moment = moment(...)`) is a self-reference error — rename; `ModelContext` does not retain its `ModelContainer`; SwiftData `rollback()` does restore a pending insert/delete (measured); `UNAuthorizationStatus.ephemeral` is not available on macOS (the scheduler uses `default:`); test fixtures avoid real-time sleeps except the tick tests; icon ids are validated before use in URLs or file names; the PNG cache is `~/Library/Application Support/Till/icons/{prefix}--{name}.png` plus `.json` sidecar, read by `IconCache` for chip display.
+
+
+---
+## Addendum (later in the 2026-11-03 sessions)
+- Branch of record is now `claude/peaceful-hawking-avdm1c` (it fast-forwarded to the zealous-einstein history, then continued).
+- Popover rework is **approved** (spec `docs/designs/2026-11-03-popover-rework.md`, mock `docs/designs/assets/`) and implemented **unbuilt** per `docs/superpowers/plans/2026-11-03-popover-rework.md`, except Task 6 (picker rework), which waits on the Iconify diagnostics in section 7.3.
+- Section 7.4's "always" item is done in code: typed errors and `os.Logger` (`subsystem == "com.crossedkeys.till"`). To diagnose: relaunch, search once, then `/usr/bin/log show --last 3m --style compact --predicate 'subsystem == "com.crossedkeys.till"'`. The `launch` category line shows which test-host signal fired (hypothesis H1).
+- Next artifacts directory: `artifacts/test-010`.
