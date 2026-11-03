@@ -222,3 +222,6 @@ One screenshot of the running app in **light appearance** over a light wallpaper
 
 **README:** the light-appearance screenshot is added beside the dark one (`docs/images/popover-light.png`, shown at 340 px each, with a one-line caption).
 
+## Update 21 — README rewritten from scratch (operator request)
+Rewritten with the readme-crafter method: source-first, Product temperament; centered icon, three static badges (platform, language, status), the two screenshots, highlights, build from source, usage table, status and limits, develop, credits (Umeicon attribution verbatim), license status. No test count, version number, CI or license badge (none can be backed). Checks run: the provided scanner (read-only, from a copy with its real file names) found all 8 local links and images present and no README-to-repo mismatches; it also confirms there is no LICENSE file, which the README states. Manual accuracy pass corrected two claims (network use includes previews; no minimum Xcode stated beyond what has been used). Not run here: `xcodegen generate`, the `xcodebuild` build, and `open` (no toolchain); they are copied from the project's own settings and the commands the operator has run. Needs the owner: a license.
+
