@@ -39,13 +39,16 @@ struct ChipsPopover: View {
         .frame(width: 340)
         .background { theme.trayTint(reduceTransparency: reduceTransparency) }
         .transaction { $0.animation = nil }          // static swaps only (settled)
+        .onChange(of: creation.pickerOpen) { _, open in IconLog.note("picker open=\(open)") }
         .onAppear {
+            IconLog.note("popover appeared")
             store.popoverOpen = true
             addFieldFocused = true                    // A1.5 default; operator may veto
             loginItems.refresh()
             Task { await store.refreshAuthorization() }
         }
         .onDisappear {
+            IconLog.note("popover disappeared")
             store.popoverOpen = false
             creation.cancelInFlight()         // dismissing cancels an in-flight icon fetch
             picker?.cancel()
