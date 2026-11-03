@@ -53,6 +53,22 @@ struct IconChoice: Sendable, Equatable {
     static let fallbackDefault = FallbackIcons.choice(for: FallbackIcons.defaultID)
 
     var isBuiltIn: Bool { FallbackIcons.isBuiltIn(id) }
+
+    /// The picker's guess for a search result, from its collection's palette flag. Only a
+    /// hint: the fetched asset's detected value replaces it (`resolved(with:)`).
+    static func hinted(by result: IconSearchResult) -> IconChoice {
+        IconChoice(
+            id: result.id, monotone: !(result.paletteHint ?? false),
+            collectionName: result.collectionName, licenseTitle: result.licenseTitle)
+    }
+
+    /// The final choice once the icon has been fetched: the asset's detected monotone flag
+    /// is the truth and wins over the hint; the set's name and license are kept.
+    func resolved(with asset: IconAsset) -> IconChoice {
+        IconChoice(
+            id: asset.id, monotone: asset.monotone,
+            collectionName: collectionName, licenseTitle: licenseTitle)
+    }
 }
 
 enum IconError: Error, Equatable, Sendable {

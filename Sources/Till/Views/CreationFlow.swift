@@ -167,9 +167,7 @@ final class CreationFlow {
         let asset = try await provider.fetch(id: choice.id)
         try Task.checkCancellation()
         guard gen == generation else { throw CancellationError() }
-        return IconChoice(
-            id: asset.id, monotone: asset.monotone,
-            collectionName: choice.collectionName, licenseTitle: choice.licenseTitle)
+        return choice.resolved(with: asset)
     }
 
     private func run<T>(_ work: () async throws -> T) async {
