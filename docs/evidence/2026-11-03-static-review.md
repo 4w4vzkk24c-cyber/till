@@ -212,3 +212,8 @@ The operator supplied a 512 px transparent PNG of a seedling (checked here: pale
 
 **Operator report after passing the icon explicitly (REPORTED, "success", nothing pasted):** taken to mean the `test-028` run succeeded and the About panel now shows the app icon. No test count, exit status or image was pasted, so this is a report, not a measurement. Whether `AppIconTests` passed individually is not evidenced. Still open: the icon's look under macOS 26 in the Dock (a classic rounded-square icon may get an extra container), Flaticon license terms beyond attribution, MIT notice texts, Version 1.0 vs 0.1.0, no pull request.
 
+
+
+## Update 19 — README screenshot (operator request)
+The operator supplied a screenshot of the running app (REPORTED, image): the compact tiles with the glass edge, the OpenAI, Z.ai, Claude and opencode marks, tightened time units and the default icon in the composer. Added as `docs/images/popover.png` (703 x 686, 183 KB) and shown at the top of `README.md`. It is a single screenshot of one appearance (dark, over a dark wallpaper); light mode and the other states are still unseen.
+\n

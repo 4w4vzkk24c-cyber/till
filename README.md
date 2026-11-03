@@ -6,6 +6,10 @@ counts down to it and sends one local notification when time is up. Overdue time
 mark them done. SwiftUI and SwiftData, Swift 6, no third-party code dependencies, no accounts, no
 sync.
 
+<p align="center">
+  <img src="docs/images/popover.png" alt="Till's popover: a deadline field with an icon button and a gear menu above four countdown tiles showing 1d 1h, 1d 3h, 2d 12h and 24d 7h, each with a pause control" width="360">
+</p>
+
 ## Build and test
 
 The Xcode project is generated from `project.yml` (re-run after adding files):
