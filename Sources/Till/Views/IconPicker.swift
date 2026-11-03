@@ -27,6 +27,7 @@ final class IconPickerModel {
     }
 
     func startSearch() {
+        IconLog.note("picker: search submitted")
         searchTask?.cancel()
         searchTask = Task { await self.search() }
     }
@@ -46,6 +47,7 @@ final class IconPickerModel {
             guard gen == generation else { return }
             results = found
             status = found.isEmpty ? .empty : .idle
+            IconLog.note("picker: search finished, \(found.count) results")
         } catch is CancellationError {
             return
         } catch {

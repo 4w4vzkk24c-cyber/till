@@ -40,6 +40,11 @@ enum IconLog {
         logger.error("\(line, privacy: .public)")
     }
 
+    /// Progress breadcrumb (counts and state names only, never query text or ids).
+    static func note(_ message: String) {
+        logger.notice("\(message, privacy: .public)")
+    }
+
     static func recordStatus(_ status: Int, operation: String) {
         logger.error("\(operation, privacy: .public) status \(status, privacy: .public)")
     }

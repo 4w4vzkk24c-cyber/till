@@ -68,6 +68,7 @@ actor IconProvider: IconFetching {
             IconLog.logger.error("search decode failed")
             throw IconError.decodeFailed
         }
+        IconLog.note("search ok: \(response.icons.count) ids")
         return response.icons.compactMap { id in
             guard let parsed = IconID.parse(id) else { return nil }
             let collection = response.collections[parsed.prefix]
