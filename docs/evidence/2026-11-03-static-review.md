@@ -95,3 +95,17 @@ Lesson for the evidence rule: green logic tests did not cover composition-root l
 **Fix verified (operator-reported):** after `54f205d` the operator relaunched the app and reported "there we go it worked" — the menu bar icon now appears and the app stays running. The `test-006` suite result and the `pgrep` output were not pasted, so the post-fix test count and exit status are not recorded here. Manual checklist items 2–8 above remain unconfirmed.
 
 **Manual checklist (operator-reported, blanket):** after the launch fix the operator reported "everythings good" in response to the 5-step list (bar tint/count R3, `Nov 15` time prompt, notification incl. quit-and-relaunch, Done/Pause/Resume/Edit, idle cadence). This is a single summary statement, not itemized observations: no screenshots, no Activity Monitor/`log` readings, and no notification-after-relaunch detail were provided to the cloud session. Treat R3 (menu-bar colour and count rendering), the popover-open heuristic (idle wake rate), and wake/relaunch notification dedupe as "reported fine, not independently evidenced" until measured. Still not exercised: VoiceOver, Increase Contrast / Reduce Transparency, login-item approval flow, signed/notarized build.
+
+## Update 4 — IconProvider and picker (cloud session, NOT compiled, NOT run)
+New: `Icons/IconModels.swift` (id validation, protocols, errors), `SVGColorInspector`, `SVGRasterizer`, `IconProvider` (actor: search, fetch, cache, eviction), `Views/IconPicker.swift` (model, view, preview cell); `CreationFlow` now fetches the chosen icon at creation (generation-checked, cancellable, `startSubmit`/`cancelInFlight`); `TimerStore.onChipsReloaded`; `AppModel` creates the provider/picker (never under test).
+New tests: `IconProviderTests.swift` (ids, colour inspector, search, fetch, offline invariant, eviction, one real-rasterizer test), `IconFlowTests.swift` (creation-flow icon behaviour, picker model).
+
+**Expected first-run risks:** `NSImage(data:)` SVG decode and `cgImage(forProposedRect:)` size/alpha (`SVGRasterizerTests` is the only real-Apple-SVG test); `NSLock.withLock` / `@unchecked Sendable` mocks under Swift 6; `NSBitmapImageRep.colorAt` colour-space assertions; the `guard let provider = madeProvider` flow in `AppModel`.
+
+**Manual checks required on the Mac (live service, not reachable from the cloud):**
+1. Picker: search `coffee` → results appear with previews; hovering/accessibility hint shows collection · license · tint note.
+2. Pick a monotone icon → chip shows it tinted with the chip accent; pick a multicolor one (e.g. a `logos:` icon) → chip shows its own colours, untinted.
+3. With Wi-Fi off: search shows the inline hint; built-in icons still create chips; an already-cached icon still works.
+4. After a chip with a fetched icon exists, no further requests to api.iconify.design (Little Snitch / `nettop` / proxy log) — the offline invariant in practice.
+5. Delete the chip, wait > 5 min, mutate any chip: its cached PNG and `.json` disappear from `~/Library/Application Support/Till/icons`.
+6. Dismiss the popover mid-fetch (throttle the network): no chip appears and the field is usable next time.

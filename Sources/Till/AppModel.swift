@@ -11,6 +11,7 @@ final class AppModel {
     let store: TimerStore
     let creation: CreationFlow
     let loginItems: LoginItemController
+    let picker: IconPickerModel?
     private(set) var loadError: String?
 
     @ObservationIgnored private let observer = SystemEventObserver()
@@ -48,10 +49,23 @@ final class AppModel {
             : .standard
         let store = TimerStore(container: container, scheduler: scheduler, defaults: defaults)
         self.store = store
-        self.creation = CreationFlow(store: store)
         self.loginItems = LoginItemController(service: SMAppServiceLoginItem())
 
-        guard !testing else { return }
+        // The icon service is the only network use and is never created under test.
+        var madeProvider: IconProvider?
+        if !testing {
+            let cache = (try? IconProvider.defaultCacheDirectory())
+                ?? FileManager.default.temporaryDirectory.appendingPathComponent("Till-icons", isDirectory: true)
+            madeProvider = IconProvider(network: URLSessionIconNetworking(), cacheDirectory: cache)
+        }
+        self.creation = CreationFlow(store: store, iconProvider: madeProvider)
+        self.picker = madeProvider.map { IconPickerModel(provider: $0) }
+
+        guard !testing, let provider = madeProvider else { return }
+        // Evict cached icons no chip references (unreferenced files get a grace period).
+        store.onChipsReloaded = { ids in
+            Task { await provider.evictUnreferenced(Set(ids)) }
+        }
         let delegate = NotificationDelegate(store: store)
         notificationDelegate = delegate
         UNUserNotificationCenter.current().delegate = delegate

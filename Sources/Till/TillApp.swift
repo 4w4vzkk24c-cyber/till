@@ -12,7 +12,8 @@ struct TillApp: App {
         MenuBarExtra {
             ChipsPopover(
                 store: model.store, creation: model.creation,
-                loginItems: model.loginItems, loadError: model.loadError)
+                loginItems: model.loginItems, picker: model.picker,
+                loadError: model.loadError)
         } label: {
             BarIconLabel(store: model.store)
         }

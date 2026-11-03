@@ -45,6 +45,9 @@ final class TimerStore {
     @ObservationIgnored private let persist: @MainActor (ModelContext) throws -> Void
     @ObservationIgnored private let sleep: @MainActor (TimeInterval) async throws -> Void
     @ObservationIgnored private var tickTask: Task<Void, Never>?
+    /// Called after every reload with the icon ids chips currently reference, so the icon
+    /// cache can evict the rest (design §5 step 3).
+    @ObservationIgnored var onChipsReloaded: (@MainActor ([String]) -> Void)?
     /// True while the popover is visible. Drives the 1 s cadence (design §7.4).
     @ObservationIgnored var popoverOpen = false {
         didSet { if oldValue != popoverOpen { restartTickingIfRunning() } }
@@ -339,6 +342,7 @@ final class TimerStore {
         let byID = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         chips = DeadlineState.displayOrder(all.map(\.snapshot)).compactMap { byID[$0.id] }
         restartTickingIfRunning()
+        onChipsReloaded?(chips.map(\.iconId))
     }
 
     /// Save now; on failure roll back the context and restore the in-memory list.

@@ -3,8 +3,10 @@ import Observation
 
 /// The add/edit field's state machine (design §5 creation sequence):
 /// parse -> time prompt (date-only input) -> persist -> schedule.
-/// Errors are inline hints, never dialogs. Icon fetch is not part of this pass: new chips
-/// use the bundled fallback glyph (see addendum A1.8).
+/// Errors are inline hints, never dialogs. The icon fetch is the only network step: it
+/// happens after the time prompt and before persist, Enter is inert while it runs, and
+/// dismissing the popover cancels it (`cancelInFlight`). A built-in (`sf:`) icon never
+/// touches the network.
 @MainActor
 @Observable
 final class CreationFlow {
@@ -22,11 +24,20 @@ final class CreationFlow {
     private(set) var errorHint: String?
     private(set) var editingID: UUID?
     private(set) var isBusy = false
+    /// True while the creation-time icon fetch is in flight (shown as a static caption).
+    private(set) var isFetchingIcon = false
+    private(set) var selectedIcon = IconChoice.fallbackDefault
+    var pickerOpen = false
 
     @ObservationIgnored private let store: TimerStore
     @ObservationIgnored private let clock: @MainActor () -> Date
     @ObservationIgnored private let calendar: Calendar
     @ObservationIgnored private let timeZone: TimeZone
+    @ObservationIgnored private let iconProvider: (any IconFetching)?
+    @ObservationIgnored private var creationTask: Task<Void, Never>?
+    /// Bumped by every cancel/reset so a result from a superseded attempt is dropped
+    /// (addendum A1.1 item 8; cancellation alone is cooperative).
+    @ObservationIgnored private var generation = 0
 
     static let accents = ["#F5A623", "#4FC3F7", "#81C784", "#BA68C8", "#FF8A65", "#FFD54F"]
     static let genericHint = "Couldn’t save that. Try again."
@@ -35,8 +46,10 @@ final class CreationFlow {
         store: TimerStore,
         clock: @escaping @MainActor () -> Date = { Date() },
         calendar: Calendar = .current,
-        timeZone: TimeZone = .current
+        timeZone: TimeZone = .current,
+        iconProvider: (any IconFetching)? = nil
     ) {
+        self.iconProvider = iconProvider
         self.store = store
         self.clock = clock
         self.calendar = calendar
@@ -93,6 +106,26 @@ final class CreationFlow {
         reset()
     }
 
+    /// View entry point: runs `submit()` in a task the flow owns so it can be cancelled.
+    func startSubmit() {
+        creationTask = Task { await self.submit() }
+    }
+
+    /// Popover dismissed: abandon any in-flight creation. No chip exists yet at that
+    /// stage, so there is nothing to roll back.
+    func cancelInFlight() {
+        generation += 1
+        creationTask?.cancel()
+        creationTask = nil
+        isFetchingIcon = false
+        isBusy = false
+    }
+
+    func selectIcon(_ choice: IconChoice) {
+        selectedIcon = choice
+        pickerOpen = false
+    }
+
     func beginEdit(id: UUID, label: String?) {
         reset()
         editingID = id
@@ -120,21 +153,48 @@ final class CreationFlow {
         if let id = editingID {
             await run { try await self.store.edit(id: id, label: self.cleanLabel, deadline: parsed) }
         } else {
+            let gen = generation
             let accent = Self.accents[store.chips.count % Self.accents.count]
-            let new = NewChip(
-                iconId: FallbackIcons.defaultID, iconMonotone: true, label: cleanLabel,
-                accentHex: accent, parsed: parsed)
-            await run { try await self.store.createChip(new) }
+            let label = cleanLabel
+            await run {
+                var icon = self.selectedIcon
+                if !icon.isBuiltIn {
+                    icon = try await self.resolveIcon(icon, generation: gen)   // the only network step
+                }
+                guard gen == self.generation else { throw CancellationError() }
+                return try await self.store.createChip(
+                    NewChip(
+                        iconId: icon.id, iconMonotone: icon.monotone, label: label,
+                        accentHex: accent, parsed: parsed))
+            }
         }
+    }
+
+    /// Fetches (or reads from cache) the chosen icon; its detected monotone flag replaces
+    /// the picker's hint.
+    private func resolveIcon(_ choice: IconChoice, generation gen: Int) async throws -> IconChoice {
+        guard let provider = iconProvider else { throw IconError.invalidIconID }
+        isFetchingIcon = true
+        defer { if gen == generation { isFetchingIcon = false } }
+        let asset = try await provider.fetch(id: choice.id)
+        try Task.checkCancellation()
+        guard gen == generation else { throw CancellationError() }
+        return IconChoice(
+            id: asset.id, monotone: asset.monotone,
+            collectionName: choice.collectionName, licenseTitle: choice.licenseTitle)
     }
 
     private func run<T>(_ work: () async throws -> T) async {
         isBusy = true
-        defer { isBusy = false }
+        let gen = generation
+        defer { if gen == generation { isBusy = false } }
         do {
             _ = try await work()
-            reset()
+            if gen == generation { reset() }
+        } catch is CancellationError {
+            return                                   // superseded or dismissed: stay silent
         } catch {
+            guard gen == generation else { return }
             errorHint = Self.message(for: error)
             if let storeError = error as? TimerStoreError, storeError == .notFound {
                 let hint = errorHint
@@ -152,10 +212,14 @@ final class CreationFlow {
         errorHint = nil
         promptHour = NaturalDeadline.suggestedHour
         promptMinute = 0
+        selectedIcon = IconChoice.fallbackDefault
+        pickerOpen = false
+        isFetchingIcon = false
     }
 
     static func message(for error: Error) -> String {
         if let e = error as? NaturalDeadlineError { return e.hint }
+        if let e = error as? IconError { return e.hint }
         if let e = error as? TimerStoreError {
             switch e {
             case .notFound: return "That timer no longer exists."

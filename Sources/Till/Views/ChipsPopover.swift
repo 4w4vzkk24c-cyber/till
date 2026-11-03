@@ -8,6 +8,7 @@ struct ChipsPopover: View {
     let store: TimerStore
     @Bindable var creation: CreationFlow
     let loginItems: LoginItemController
+    let picker: IconPickerModel?
     let loadError: String?
 
     @FocusState private var addFieldFocused: Bool
@@ -38,7 +39,11 @@ struct ChipsPopover: View {
             loginItems.refresh()
             Task { await store.refreshAuthorization() }
         }
-        .onDisappear { store.popoverOpen = false }
+        .onDisappear {
+            store.popoverOpen = false
+            creation.cancelInFlight()         // dismissing cancels an in-flight icon fetch
+            picker?.cancel()
+        }
     }
 
     // MARK: - Header
@@ -64,14 +69,28 @@ struct ChipsPopover: View {
             .textFieldStyle(.roundedBorder)
             .focused($addFieldFocused)
             .disabled(creation.phase != .idle)
-            .onSubmit { Task { await creation.submit() } }
+            .onSubmit { creation.startSubmit() }
             .accessibilityLabel("Deadline")
 
             TextField("Label (optional)", text: $creation.label)
                 .textFieldStyle(.roundedBorder)
                 .disabled(creation.phase != .idle)
-                .onSubmit { Task { await creation.submit() } }
+                .onSubmit { creation.startSubmit() }
                 .accessibilityLabel("Label")
+
+            if creation.editingID == nil {
+                iconRow
+                if creation.pickerOpen, let picker {
+                    IconPickerView(model: picker, creation: creation)
+                }
+            }
+
+            if creation.isFetchingIcon {
+                // Static caption, no spinner: no animation anywhere (design §4, §5).
+                Text("Fetching icon…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             if case .awaitingTime = creation.phase {
                 HStack {
@@ -91,6 +110,31 @@ struct ChipsPopover: View {
                     .foregroundStyle(.red)
                     .accessibilityLabel("Error: \(hint)")
             }
+        }
+    }
+
+    private var iconRow: some View {
+        HStack(spacing: 8) {
+            Button {
+                if picker != nil { creation.pickerOpen.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    ChipIconView(
+                        iconId: creation.selectedIcon.id, monotone: creation.selectedIcon.monotone,
+                        tint: .primary)
+                        .frame(width: 20, height: 20)
+                    Text(picker == nil ? "Built-in icon" : "Icon")
+                        .font(.caption)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(picker == nil || creation.phase != .idle)
+            .accessibilityLabel("Choose icon")
+            Text(IconPickerModel.disclosure(for: creation.selectedIcon))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer()
         }
     }
 
