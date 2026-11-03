@@ -70,6 +70,18 @@ import Testing
         #expect(FallbackIcons.symbolName(for: "mdi:timer") == nil)
         #expect(FallbackIcons.all.contains(FallbackIcons.defaultID))
     }
+
+    @Test func theSeedlingIsTheDefaultBuiltIn() {
+        #expect(FallbackIcons.defaultID == "builtin:seedling")
+        #expect(FallbackIcons.all.first == FallbackIcons.defaultID)
+        #expect(FallbackIcons.isBuiltIn("builtin:seedling"))
+        #expect(FallbackIcons.isBuiltIn("sf:timer"))
+        #expect(!FallbackIcons.isBuiltIn("mdi:coffee"))
+        #expect(FallbackIcons.symbolName(for: "builtin:seedling") == nil)     // not an SF Symbol
+        #expect(FallbackIcons.displayName(for: "builtin:seedling") == "seedling")
+        #expect(FallbackIcons.displayName(for: "sf:cup.and.saucer") == "cup.and.saucer")
+        #expect(IconChoice.fallbackDefault.isBuiltIn)                          // never fetched from the network
+    }
 }
 
 @MainActor
@@ -148,3 +160,16 @@ import Testing
         #expect(corner.alphaComponent < 0.1)
     }
 }
+
+@MainActor
+@Suite struct BundledIconsTests {
+    @Test func theSeedlingRendersFromTheEmbeddedSVG() {
+        #expect(BundledIcons.image(for: FallbackIcons.seedlingID) != nil)
+    }
+
+    @Test func otherIdsAreNotBundled() {
+        #expect(BundledIcons.image(for: "sf:timer") == nil)
+        #expect(BundledIcons.image(for: "mdi:coffee") == nil)
+    }
+}
+

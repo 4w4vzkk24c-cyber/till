@@ -51,17 +51,47 @@ extension Color {
     }
 }
 
-/// Bundled fallback glyphs (design §5 step 4): SF Symbols referenced as `sf:<name>`.
-/// Until `IconProvider` exists every chip uses one of these.
+/// Built-in glyphs (design §5 step 4), always available offline and never fetched: SF
+/// Symbols referenced as `sf:<name>`, plus the bundled seedling as `builtin:seedling`.
+/// The seedling is the default icon (operator decision, 2026-11-03).
 enum FallbackIcons {
-    static let defaultID = "sf:timer"
+    static let seedlingID = "builtin:seedling"
+    static let defaultID = seedlingID
     static let all = [
-        "sf:timer", "sf:bell", "sf:cup.and.saucer", "sf:fork.knife",
+        seedlingID, "sf:timer", "sf:bell", "sf:cup.and.saucer", "sf:fork.knife",
         "sf:pills", "sf:phone", "sf:car", "sf:flame",
     ]
 
+    /// True for ids that need no network: SF Symbols and bundled glyphs.
+    static func isBuiltIn(_ iconId: String) -> Bool {
+        iconId.hasPrefix("sf:") || iconId.hasPrefix("builtin:")
+    }
+
     static func symbolName(for iconId: String) -> String? {
         iconId.hasPrefix("sf:") ? String(iconId.dropFirst(3)) : nil
+    }
+
+    /// Plain name for accessibility text: `cup.and.saucer`, `seedling`.
+    static func displayName(for iconId: String) -> String {
+        if iconId.hasPrefix("sf:") { return String(iconId.dropFirst(3)) }
+        if iconId.hasPrefix("builtin:") { return String(iconId.dropFirst(8)) }
+        return iconId
+    }
+}
+
+/// Bundled (non-SF) glyphs, rasterized once from the embedded SVG (`BarGlyph`) and memoized
+/// so the 1 s display tick does no work.
+@MainActor
+enum BundledIcons {
+    private static var memo: [String: NSImage] = [:]
+
+    static func image(for iconId: String) -> NSImage? {
+        guard iconId == FallbackIcons.seedlingID else { return nil }
+        if let hit = memo[iconId] { return hit }
+        guard let png = try? SVGRasterizer.pngData(from: Data(BarGlyph.seedlingSVG.utf8), pixels: 128),
+              let image = NSImage(data: png) else { return nil }
+        memo[iconId] = image
+        return image
     }
 }
 
@@ -95,6 +125,9 @@ struct ChipIconView: View {
     var body: some View {
         if let symbol = FallbackIcons.symbolName(for: iconId) {
             Image(systemName: symbol).resizable().scaledToFit().foregroundStyle(tint)
+        } else if let bundled = BundledIcons.image(for: iconId) {
+            Image(nsImage: bundled).renderingMode(.template).resizable().scaledToFit()
+                .foregroundStyle(tint)
         } else if let image = IconCache.image(for: iconId) {
             if monotone {
                 Image(nsImage: image).renderingMode(.template).resizable().scaledToFit()
@@ -105,7 +138,7 @@ struct ChipIconView: View {
             }
         } else {
             // Cache missing/corrupt: bundled fallback glyph (design §8).
-            Image(systemName: FallbackIcons.symbolName(for: FallbackIcons.defaultID) ?? "timer")
+            Image(systemName: "timer")
                 .resizable().scaledToFit().foregroundStyle(tint)
         }
     }

@@ -53,7 +53,7 @@ struct IconChoice: Sendable, Equatable {
     static let fallbackDefault = IconChoice(
         id: FallbackIcons.defaultID, monotone: true, collectionName: nil, licenseTitle: nil)
 
-    var isBuiltIn: Bool { FallbackIcons.symbolName(for: id) != nil }
+    var isBuiltIn: Bool { FallbackIcons.isBuiltIn(id) }
 }
 
 enum IconError: Error, Equatable, Sendable {

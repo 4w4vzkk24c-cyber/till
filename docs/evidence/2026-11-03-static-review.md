@@ -179,3 +179,6 @@ Tokens only (spec "Glass pass"): lighter tray tint, clearer tile fill, 1 pt glas
 ## Update 13 — Tile padding (operator request, UNBUILT)
 Operator reported the label removal and glass pass working ("it works", REPORTED, no test result pasted for that run) and asked for more top and bottom padding on the cards. Tile padding top 8 -> 12 pt and bottom 6 -> 10 pt; tile height 112 -> 120 pt; grid cap 360 -> 384 pt (three rows = 376 pt). `ChipGridLayoutTests` updated first. Not compiled or run.
 
+## Update 14 — More padding, seedling as the default icon (operator request, UNBUILT)
+Tile padding top 12 -> 16 and bottom 10 -> 14 (tile 128 pt, grid cap 408 pt). The default chip icon is now the bundled seedling (`builtin:seedling`): `FallbackIcons.isBuiltIn` treats `sf:` and `builtin:` ids as offline built-ins (so creation never fetches it), `BundledIcons` rasterizes it from `BarGlyph`, and it leads the picker's built-in row (nine built-ins, 282 pt in a 304 pt row). Tests first (`theSeedlingIsTheDefaultBuiltIn`, `BundledIconsTests`, tile height). Not compiled or run. UNVERIFIED: how it reads at 40 pt in a tile, and the built-in row fit. Operator-reported `test-019`/`test-020` results were not pasted.
+

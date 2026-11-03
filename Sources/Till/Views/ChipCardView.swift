@@ -35,9 +35,9 @@ struct ChipCardView: View {
 
             controlStrip(p, theme)
         }
-        .padding(.top, 12)
+        .padding(.top, 16)
         .padding(.horizontal, 6)
-        .padding(.bottom, 10)
+        .padding(.bottom, 14)
         .frame(maxWidth: .infinity)
         .frame(height: ChipGridLayout.tileHeight)
         .background { surface(p.surface, theme) }

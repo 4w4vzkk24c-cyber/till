@@ -213,7 +213,7 @@ struct IconPickerView: View {
                                 in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Built-in icon \(FallbackIcons.symbolName(for: id) ?? id)")
+                    .accessibilityLabel("Built-in icon \(FallbackIcons.displayName(for: id))")
                 }
             }
         }

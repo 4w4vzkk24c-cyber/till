@@ -37,9 +37,9 @@ struct ChipPresentation: Equatable {
 /// opened too short and clipped the tiles. The height is computed from the chip count, and
 /// capped so long lists scroll.
 enum ChipGridLayout {
-    static let tileHeight: CGFloat = 120      // 12 top + 40 icon + 2 + 28 hero + 2 + 26 control + 10 bottom
+    static let tileHeight: CGFloat = 128      // 16 top + 40 icon + 2 + 28 hero + 2 + 26 control + 14 bottom
     static let gap: CGFloat = 8
-    static let maxHeight: CGFloat = 384        // three full rows (376) with room to spare
+    static let maxHeight: CGFloat = 408        // three full rows (400) with room to spare
 
     static func height(forChips count: Int) -> CGFloat {
         guard count > 0 else { return 0 }
