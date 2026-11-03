@@ -37,7 +37,7 @@ import Testing
 }
 
 @Suite struct ChipGridLayoutTests {
-    @Test func theTileIsCompact() { #expect(ChipGridLayout.tileHeight == 112) }
+    @Test func theTileHeightMatchesItsContent() { #expect(ChipGridLayout.tileHeight == 120) }   // 12 + 40 + 2 + 28 + 2 + 26 + 10
 
     @Test func noChipsNeedNoGrid() { #expect(ChipGridLayout.height(forChips: 0) == 0) }
 

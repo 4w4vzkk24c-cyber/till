@@ -12,7 +12,7 @@
 3. Fill and outline carry state; the control glyph and a `+` in the time back them up (the `due soon` caption was removed by the operator).
 4. Static: no animation, no spinner, no transition (design §4 stands).
 
-## Chip tile (156 pt wide at the 340 pt popover, 112 pt tall)
+## Chip tile (156 pt wide at the 340 pt popover, 120 pt tall: 12 pt top padding, 10 pt bottom)
 Operator revision 2026-11-03: **chips have no label** (the icon is the subject). Order, centered: icon 40 pt, hero digits (26 pt bold, monospaced, `minimumScaleFactor` 0.7), full-width control strip (26 pt). No caption row and no label row in any state, so every tile is the same height and `ChipGridLayout` stays exact.
 
 | State | Surface | Control |
@@ -34,7 +34,7 @@ Approaching is amber outline plus amber digits only (the `due soon` caption was 
 ## Popover
 - Width 340 (unchanged). Padding 10, tile gap 8, concentric radii: tile 20, control 12, field pill 20. The window's own corner radius is system-controlled; tile radius is a single constant to tune after seeing it on the Mac.
 - Surface: system window material with a blue-ish tint overlay. Reduce Transparency: opaque tint. Increase Contrast: stronger hairline and tile fill.
-- The chip grid has an explicit height from the chip count (`ChipGridLayout`): rows x 112 pt plus 8 pt gaps, capped at 360 pt so three full rows (352 pt) fit and longer lists scroll. An explicit height is required because the menu-bar window sizes from natural height and a `ScrollView` with only a maximum collapses (observed 2026-11-03). The earlier "470" cap was an arithmetic slip: three rows of the then 152 pt tiles needed 472.
+- The chip grid has an explicit height from the chip count (`ChipGridLayout`): rows x 120 pt plus 8 pt gaps, capped at 384 pt so three full rows (376 pt) fit and longer lists scroll. An explicit height is required because the menu-bar window sizes from natural height and a `ScrollView` with only a maximum collapses (observed 2026-11-03). The earlier "470" cap was an arithmetic slip: three rows of the then 152 pt tiles needed 472.
 - **Composer** (replaces the two fields, the icon row and the footer): one pill with a leading 26 pt icon tile button, the deadline field (`in 20 min, Fri 5pm`), and a right-aligned label field with a visible `Label` placeholder; the gear sits beside it. Below it, one status line.
 - **Status line precedence:** error, then `Fetching icon…`, then editing note (`Editing. Leave the deadline blank to keep it.` with Cancel), then parse echo. The time prompt (`At what time?`, time picker, Set, Cancel) keeps its current behavior and is drawn as a row in the same style. **Edit mode, the time prompt and error styling are not in the mock;** they reuse the field row and status-line styles and need operator review.
 - **Parse echo** (new, pure): `Friday 5:00 PM, in 3 d 7 h`; date-only input reads `Nov 15, then you pick a time`; unparseable or past input shows nothing (the error still appears on submit).

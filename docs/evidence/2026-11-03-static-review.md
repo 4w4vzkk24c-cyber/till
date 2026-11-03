@@ -176,3 +176,6 @@ Tokens only (spec "Glass pass"): lighter tray tint, clearer tile fill, 1 pt glas
 
 **Result of Updates 11 and 12, run `artifacts/test-018` (operator-reported, MEASURED):** `xcodebuild exit: 65`; `Test run with 210 tests in 29 suites failed after 0.173 seconds with 1 issue`; `** TEST FAILED **`. The single failure was `TimerStoreTests.createPersistsAndSchedules()` at line 77: `Expectation failed: h.scheduler.scheduled[0].title == "Dentist"`. Cause: a stale assertion left over from before labels were removed (my read of that region stopped two lines short). The whole target compiled, including the new `MigrationTests`, which is not among the failures. Fix: the assertion now expects `"Timer"`. Not yet re-run. Runs `test-015` to `test-017` were not pasted.
 
+## Update 13 — Tile padding (operator request, UNBUILT)
+Operator reported the label removal and glass pass working ("it works", REPORTED, no test result pasted for that run) and asked for more top and bottom padding on the cards. Tile padding top 8 -> 12 pt and bottom 6 -> 10 pt; tile height 112 -> 120 pt; grid cap 360 -> 384 pt (three rows = 376 pt). `ChipGridLayoutTests` updated first. Not compiled or run.
+
