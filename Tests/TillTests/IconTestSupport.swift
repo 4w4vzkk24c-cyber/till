@@ -2,8 +2,8 @@ import Foundation
 @testable import Till
 
 enum Samples {
-    static let monotoneSVG = #"<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24"><path fill="#ffffff" d="M2 2h20v20H2z"/></svg>"#
-    static let paletteSVG = #"<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24"><path fill="#e91e63" d="M2 2h10v20H2z"/><path fill="#ffffff" d="M12 2h10v20H12z"/></svg>"#
+    static let monotoneSVG = ##"<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24"><path fill="#ffffff" d="M2 2h20v20H2z"/></svg>"##
+    static let paletteSVG = ##"<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24"><path fill="#e91e63" d="M2 2h10v20H2z"/><path fill="#ffffff" d="M12 2h10v20H12z"/></svg>"##
 
     static let searchJSON = #"""
     {"icons":["mdi:timer","mdi:timer-outline","bad id","logos:apple"],"total":4,"limit":64,"start":0,

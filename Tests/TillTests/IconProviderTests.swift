@@ -27,34 +27,34 @@ import Testing
 
 @Suite struct SVGColorInspectorTests {
     @Test(arguments: [
-        #"<svg><path fill="#fff" d="M0 0"/></svg>"#,
-        #"<svg><path fill="#FFFFFF" d="M0 0"/></svg>"#,
-        #"<svg><path fill="white"/></svg>"#,
-        #"<svg><path fill="currentColor"/></svg>"#,
-        #"<svg fill="none"><path stroke="#ffffff" stroke-width="2"/></svg>"#,
-        #"<svg><path style="fill:#fff;stroke:none"/></svg>"#,
-        #"<svg><path fill-rule="evenodd" clip-rule="evenodd" fill="#fff"/></svg>"#,
-        #"<svg><path fill='#fff'/></svg>"#,
-        #"<svg><path fill="rgb(255, 255, 255)"/></svg>"#,
-        #"<svg><path d="M0 0h1v1z"/></svg>"#,
+        ##"<svg><path fill="#fff" d="M0 0"/></svg>"##,
+        ##"<svg><path fill="#FFFFFF" d="M0 0"/></svg>"##,
+        ##"<svg><path fill="white"/></svg>"##,
+        ##"<svg><path fill="currentColor"/></svg>"##,
+        ##"<svg fill="none"><path stroke="#ffffff" stroke-width="2"/></svg>"##,
+        ##"<svg><path style="fill:#fff;stroke:none"/></svg>"##,
+        ##"<svg><path fill-rule="evenodd" clip-rule="evenodd" fill="#fff"/></svg>"##,
+        ##"<svg><path fill='#fff'/></svg>"##,
+        ##"<svg><path fill="rgb(255, 255, 255)"/></svg>"##,
+        ##"<svg><path d="M0 0h1v1z"/></svg>"##,
     ])
     func monotone(_ svg: String) {
         #expect(SVGColorInspector.isMonotone(svg))
     }
 
     @Test(arguments: [
-        #"<svg><path fill="#e91e63"/></svg>"#,
-        #"<svg><path fill="#ffffff"/><path fill="#000"/></svg>"#,
-        #"<svg><path style="fill: #ff0000"/></svg>"#,
-        #"<svg><defs><linearGradient id="a"><stop stop-color="#f00"/></linearGradient></defs><path fill="url(#a)"/></svg>"#,
-        #"<svg><path stroke="red"/></svg>"#,
+        ##"<svg><path fill="#e91e63"/></svg>"##,
+        ##"<svg><path fill="#ffffff"/><path fill="#000"/></svg>"##,
+        ##"<svg><path style="fill: #ff0000"/></svg>"##,
+        ##"<svg><defs><linearGradient id="a"><stop stop-color="#f00"/></linearGradient></defs><path fill="url(#a)"/></svg>"##,
+        ##"<svg><path stroke="red"/></svg>"##,
     ])
     func palette(_ svg: String) {
         #expect(!SVGColorInspector.isMonotone(svg))
     }
 
     @Test func extractsValuesWithoutMatchingLookalikes() {
-        let svg = #"<svg><path fill-opacity="0.5" stroke-width="2" fill="#fff" stroke="none"/></svg>"#
+        let svg = ##"<svg><path fill-opacity="0.5" stroke-width="2" fill="#fff" stroke="none"/></svg>"##
         #expect(SVGColorInspector.colorValues(in: svg) == ["#fff", "none"])
     }
 }
