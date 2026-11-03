@@ -61,4 +61,10 @@ import Testing
         #expect(!AboutPanel.shouldRaise(styleMask: [.borderless], isVisible: true))
         #expect(!AboutPanel.shouldRaise(styleMask: [.nonactivatingPanel], isVisible: true))
     }
+
+    @Test func thePanelSitsOneLayerAboveTheWindowItWasOpenedFrom() {
+        #expect(AboutPanel.raisedLevel(above: .statusBar).rawValue == NSWindow.Level.statusBar.rawValue + 1)
+        #expect(AboutPanel.raisedLevel(above: .normal).rawValue == NSWindow.Level.normal.rawValue + 1)
+    }
 }
+
