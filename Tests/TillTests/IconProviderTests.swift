@@ -267,12 +267,24 @@ import Testing
         let png = try SVGRasterizer.pngData(from: Data(Samples.monotoneSVG.utf8), pixels: 256)
         #expect(Array(png.prefix(4)) == [0x89, 0x50, 0x4E, 0x47])
         let rep = try #require(NSBitmapImageRep(data: png))
-        #expect(rep.pixelsWide == 256 && rep.pixelsHigh == 256)
-        let center = try #require(rep.colorAt(x: 128, y: 128))
-        #expect(center.alphaComponent > 0.9)
-        #expect(center.redComponent > 0.9 && center.greenComponent > 0.9 && center.blueComponent > 0.9)
+        #expect(rep.pixelsWide == 256 && rep.pixelsHigh == 256,
+                "got \(rep.pixelsWide)x\(rep.pixelsHigh) pixels")
+        let center = try #require(rep.colorAt(x: rep.pixelsWide / 2, y: rep.pixelsHigh / 2))
+        #expect(center.alphaComponent > 0.9, "center alpha \(center.alphaComponent)")
+        #expect(center.redComponent > 0.9 && center.greenComponent > 0.9 && center.blueComponent > 0.9,
+                "center rgb \(center.redComponent) \(center.greenComponent) \(center.blueComponent)")
         let corner = try #require(rep.colorAt(x: 2, y: 2))
-        #expect(corner.alphaComponent < 0.1)
+        #expect(corner.alphaComponent < 0.1, "corner alpha \(corner.alphaComponent)")
+    }
+
+    @Test func requestedSizeIsExactAndAspectRatioIsKept() throws {
+        let wide = ##"<svg xmlns="http://www.w3.org/2000/svg" width="48" height="24" viewBox="0 0 48 24"><rect width="48" height="24" fill="#ffffff"/></svg>"##
+        let png = try SVGRasterizer.pngData(from: Data(wide.utf8), pixels: 128)
+        let rep = try #require(NSBitmapImageRep(data: png))
+        #expect(rep.pixelsWide == 128 && rep.pixelsHigh == 64, "got \(rep.pixelsWide)x\(rep.pixelsHigh) pixels")
+        let small = try SVGRasterizer.pngData(from: Data(Samples.monotoneSVG.utf8), pixels: 32)
+        let smallRep = try #require(NSBitmapImageRep(data: small))
+        #expect(smallRep.pixelsWide == 32 && smallRep.pixelsHigh == 32, "got \(smallRep.pixelsWide)x\(smallRep.pixelsHigh) pixels")
     }
 
     @Test func garbageIsATypedError() {
