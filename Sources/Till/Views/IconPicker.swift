@@ -141,11 +141,7 @@ struct IconPickerView: View {
                 LazyVGrid(columns: columns, spacing: 6) {
                     ForEach(model.visibleResults) { result in
                         Button {
-                            creation.selectIcon(
-                                IconChoice(
-                                    id: result.id, monotone: !(result.paletteHint ?? false),
-                                    collectionName: result.collectionName,
-                                    licenseTitle: result.licenseTitle))
+                            creation.selectIcon(IconChoice.hinted(by: result))
                         } label: {
                             IconPreviewCell(
                                 provider: model.provider, result: result, theme: theme,

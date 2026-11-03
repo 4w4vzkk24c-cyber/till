@@ -25,8 +25,11 @@ struct NewChip: Sendable {
 /// - actions target `ChipEntity.id` and re-fetch after every suspension;
 /// - reconciliation is single-flight (a trigger arriving mid-pass requests one rerun).
 ///
-/// Not in this pass: the display tick loop, the UNUserNotificationCenter delegate wiring
-/// (call `handleDeliveryObserved` from it), and the creation-flow UI.
+/// The display tick loop lives in `DisplayTickDriving`; the store keeps `tick()`, the
+/// `popoverOpen` input and the interval it implies (`tickInterval`), and tells the driver
+/// through `onCadenceInputsChanged` when that interval's inputs change.
+/// Not in this pass: the UNUserNotificationCenter delegate wiring (call
+/// `handleDeliveryObserved` from it), and the creation-flow UI.
 @MainActor
 @Observable
 final class TimerStore {
@@ -42,14 +45,15 @@ final class TimerStore {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let clock: @MainActor () -> Date
     @ObservationIgnored private let persist: @MainActor (ModelContext) throws -> Void
-    @ObservationIgnored private let sleep: @MainActor (TimeInterval) async throws -> Void
-    @ObservationIgnored private var tickTask: Task<Void, Never>?
     /// Called after every reload with the icon ids chips currently reference, so the icon
     /// cache can evict the rest (design §5 step 3).
     @ObservationIgnored var onChipsReloaded: (@MainActor ([String]) -> Void)?
+    /// Called when an input of `tickInterval` changes (the popover opens or closes, the chip
+    /// list is reloaded), so the tick driver can read the interval again.
+    @ObservationIgnored var onCadenceInputsChanged: (@MainActor () -> Void)?
     /// True while the popover is visible. Drives the 1 s cadence (design §7.4).
     @ObservationIgnored var popoverOpen = false {
-        didSet { if oldValue != popoverOpen { restartTickingIfRunning() } }
+        didSet { if oldValue != popoverOpen { onCadenceInputsChanged?() } }
     }
 
     /// Last notification authorization state this store observed (footer reads it).
@@ -68,10 +72,7 @@ final class TimerStore {
         scheduler: any NotificationScheduling,
         defaults: UserDefaults = .standard,
         clock: @escaping @MainActor () -> Date = { Date() },
-        persist: @escaping @MainActor (ModelContext) throws -> Void = { try $0.save() },
-        sleep: @escaping @MainActor (TimeInterval) async throws -> Void = {
-            try await Task.sleep(for: .seconds($0))
-        }
+        persist: @escaping @MainActor (ModelContext) throws -> Void = { try $0.save() }
     ) {
         self.container = container
         self.context = container.mainContext
@@ -79,7 +80,6 @@ final class TimerStore {
         self.defaults = defaults
         self.clock = clock
         self.persist = persist
-        self.sleep = sleep
         self.now = clock()
         self.notificationsEnabled =
             defaults.object(forKey: Self.notificationsEnabledKey) as? Bool ?? true
@@ -96,7 +96,7 @@ final class TimerStore {
         await reconcile()
     }
 
-    // MARK: - Display tick loop (design §7.4; seed cadence verbatim)
+    // MARK: - Display clock (design §7.4; seed cadence verbatim)
 
     /// Remaining time always derives from `deadline - now`, never from accumulated ticks,
     /// so sleep and drift self-correct on the next tick.
@@ -104,37 +104,10 @@ final class TimerStore {
         now = clock()
     }
 
-    func nextTickInterval() -> TimeInterval {
+    /// How long the tick driver should wait before the next tick: `TickCadence` is the single
+    /// authority.
+    var tickInterval: TimeInterval {
         TickCadence.interval(popoverOpen: popoverOpen, chips: chips.map(\.snapshot), now: clock())
-    }
-
-    /// Idempotent. The task is owned here and stopped by `stopTicking()` (or restarted by
-    /// `restartTickingIfRunning()`); it holds `self` weakly and never across the sleep.
-    func startTicking() {
-        guard tickTask == nil else { return }
-        tick()
-        let sleep = self.sleep
-        tickTask = Task { [weak self] in
-            while !Task.isCancelled {
-                guard let interval = self?.nextTickInterval() else { return }
-                do { try await sleep(interval) } catch { return }
-                guard let store = self else { return }
-                store.tick()
-            }
-        }
-    }
-
-    func stopTicking() {
-        tickTask?.cancel()
-        tickTask = nil
-    }
-
-    var isTicking: Bool { tickTask != nil }
-
-    private func restartTickingIfRunning() {
-        guard tickTask != nil else { return }
-        stopTicking()
-        startTicking()
     }
 
     // MARK: - Mutations
@@ -285,7 +258,7 @@ final class TimerStore {
 
     private func scheduleAllActiveFutures() async {
         let now = clock()
-        let ids = chips.filter { $0.pausedAt == nil && $0.deadline > now }.map(\.id)
+        let ids = chips.filter { isActiveFuture($0, at: now) }.map(\.id)
         for id in ids {
             await scheduleIfPossible(id: id, requestAuthorizationIfNeeded: false)
         }
@@ -299,8 +272,8 @@ final class TimerStore {
         }
         authorization = status
         guard status == .authorized else { return }
-        guard notificationsEnabled, let chip = fetchEntity(id), chip.pausedAt == nil,
-              chip.deadline > clock() else { return }
+        guard notificationsEnabled, let chip = fetchEntity(id),
+              isActiveFuture(chip, at: clock()) else { return }
         do {
             try await scheduler.schedule(id: id, content: content(for: chip), at: chip.deadline)
         } catch {
@@ -313,6 +286,11 @@ final class TimerStore {
         if !notificationsEnabled || fetchEntity(id)?.pausedAt != nil || fetchEntity(id) == nil {
             scheduler.removePending(ids: [id])
         }
+    }
+
+    /// Not paused and not yet due: the chips that get a notification scheduled.
+    private func isActiveFuture(_ chip: ChipEntity, at now: Date) -> Bool {
+        chip.pausedAt == nil && chip.deadline > now
     }
 
     private func needsNotification(_ chip: ChipEntity, at now: Date) -> Bool {
@@ -336,7 +314,7 @@ final class TimerStore {
         let all = try context.fetch(FetchDescriptor<ChipEntity>())
         let byID = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         chips = DeadlineState.displayOrder(all.map(\.snapshot)).compactMap { byID[$0.id] }
-        restartTickingIfRunning()
+        onCadenceInputsChanged?()
         onChipsReloaded?(chips.map(\.iconId))
     }
 

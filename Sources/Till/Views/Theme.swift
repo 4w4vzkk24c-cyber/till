@@ -50,6 +50,17 @@ struct Theme {
         return isDark ? Color(hex: "#1E3260").opacity(0.24) : Color(hex: "#7FA6E8").opacity(0.06)
     }
 
+    /// The colour for a presentation tone; `onRed` is the light colour used on the red tile.
+    func color(_ tone: ChipPresentation.Tone, accentHex: String) -> Color {
+        switch tone {
+        case .primary: return ink
+        case .secondary: return ink2
+        case .amber: return amber
+        case .onRed: return .white
+        case .accent: return accent(accentHex)
+        }
+    }
+
     static let overdueFill = Color(hex: "#CF2F36")
 
     enum Radius {

@@ -16,6 +16,7 @@ final class AppModel {
     private(set) var loadError: String?
 
     @ObservationIgnored private let observer = SystemEventObserver()
+    @ObservationIgnored private var tickDriver: TaskDisplayTickDriver?
     @ObservationIgnored private var notificationDelegate: NotificationDelegate?
 
     /// Under XCTest/swift-testing the app is only a host: do not touch the user's real
@@ -70,13 +71,19 @@ final class AppModel {
         notificationDelegate = delegate
         UNUserNotificationCenter.current().delegate = delegate
         observer.start(store: store, loginItems: loginItems)
+        // The display tick: the driver decides when, the store decides what and how often.
+        let driver = TaskDisplayTickDriver(
+            interval: { [weak store] in store?.tickInterval ?? TickCadence.idle },
+            tick: { [weak store] in store?.tick() })
+        store.onCadenceInputsChanged = { [weak driver] in driver?.cadenceInputsChanged() }
+        tickDriver = driver
         Task { [weak self] in
             do {
                 try await store.start()
             } catch {
                 self?.loadError = "Couldn’t load your saved timers."
             }
-            store.startTicking()
+            driver.start()
         }
     }
 

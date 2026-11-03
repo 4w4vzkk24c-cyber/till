@@ -7,28 +7,44 @@ import SwiftUI
 struct ChipPresentation: Equatable {
     enum Surface: Equatable { case neutral, dueSoon, overdue, paused }
     enum Control: Equatable { case pause, resume, done }
+    /// A semantic colour, mapped to a real colour by `Theme.color(_:accentHex:)`: the colour
+    /// decisions live here (unit-tested), the view only draws them.
+    enum Tone: Equatable { case primary, secondary, amber, onRed, accent }
 
     let surface: Surface
     let hero: String
     let control: Control
+    let heroTone: Tone
+    let iconTone: Tone
+    let iconOpacity: Double
+    let controlTone: Tone
+    let controlHasFill: Bool
 
     init(state: ChipState, heroText: String) {
         switch state {
         case .clean:
             surface = .neutral; control = .pause
             hero = heroText
+            heroTone = .primary; iconTone = .accent; iconOpacity = 1
+            controlTone = .primary; controlHasFill = false
         case .approaching:
             surface = .dueSoon; control = .pause
             hero = heroText
+            heroTone = .amber; iconTone = .accent; iconOpacity = 1
+            controlTone = .primary; controlHasFill = false
         case .overdue:
             // "+41m overdue" renders as hero "+41m": the red fill, the "+" and the Done
             // control say "overdue", so the word is dropped from the digits to fit the tile.
             surface = .overdue; control = .done
             let suffix = " overdue"
             hero = heroText.hasSuffix(suffix) ? String(heroText.dropLast(suffix.count)) : heroText
+            heroTone = .onRed; iconTone = .onRed; iconOpacity = 1
+            controlTone = .onRed; controlHasFill = true         // light "Done" on a darker strip
         case .paused:
             surface = .paused; control = .resume
             hero = heroText
+            heroTone = .secondary; iconTone = .accent; iconOpacity = 0.5
+            controlTone = .primary; controlHasFill = false
         }
     }
 }

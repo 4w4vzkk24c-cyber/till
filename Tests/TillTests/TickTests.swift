@@ -52,24 +52,50 @@ import Testing
         #expect(h.store.now == h.clock.now)
     }
 
-    @Test func startAndStopAreIdempotent() async throws {
+    @Test func tickIntervalFollowsThePopoverAndTheChips() async throws {
         let h = try Harness()
-        h.store.startTicking()
-        h.store.startTicking()
-        #expect(h.store.isTicking)
-        h.store.stopTicking()
-        h.store.stopTicking()
-        #expect(!h.store.isTicking)
+        #expect(h.store.tickInterval == TickCadence.idle)
+        h.store.popoverOpen = true
+        #expect(h.store.tickInterval == TickCadence.active)
+        h.store.popoverOpen = false
+        try await h.create(in: 600)                     // inside its 30 min window
+        #expect(h.store.tickInterval == TickCadence.active)
     }
 
-    @Test func cadenceFollowsPopoverState() async throws {
+    @Test func aPopoverChangeTellsTheDriver() async throws {
+        let h = try Harness()
+        let changes = Box(0)
+        h.store.onCadenceInputsChanged = { changes.value += 1 }
+        h.store.popoverOpen = true
+        #expect(changes.value == 1)
+        h.store.popoverOpen = true                      // no change, no notification
+        #expect(changes.value == 1)
+        h.store.popoverOpen = false
+        #expect(changes.value == 2)
+    }
+
+    @Test func aChipMutationTellsTheDriver() async throws {
+        let h = try Harness()
+        let changes = Box(0)
+        h.store.onCadenceInputsChanged = { changes.value += 1 }
+        try await h.create(in: 3600)
+        #expect(changes.value >= 1)
+    }
+
+    /// The old loop tests, migrated: the real driver wired to the store the way `AppModel`
+    /// wires it, with a recording sleep in place of the real one.
+    @Test func theWiredDriverFollowsThePopoverState() async throws {
         let intervals = Box<[TimeInterval]>([])
-        let h = try Harness(sleep: { interval in
-            intervals.value.append(interval)
-            try await Task.sleep(for: .seconds(1000))
-        })
-        h.store.startTicking()
-        defer { h.store.stopTicking() }
+        let h = try Harness()
+        let driver = TaskDisplayTickDriver(
+            interval: { h.store.tickInterval }, tick: { h.store.tick() },
+            sleep: { interval in
+                intervals.value.append(interval)
+                try await Task.sleep(for: .seconds(1000))
+            })
+        h.store.onCadenceInputsChanged = { driver.cadenceInputsChanged() }
+        driver.start()
+        defer { driver.stop() }
         await waitUntil { intervals.value.count >= 1 }
         #expect(intervals.value == [30])
 
@@ -82,30 +108,21 @@ import Testing
         #expect(intervals.value == [30, 1, 30])
     }
 
-    @Test func approachingChipSpeedsUpTheLoopWhileClosed() async throws {
+    @Test func theWiredDriverSpeedsUpWhenAChipEntersItsFinalStretch() async throws {
         let intervals = Box<[TimeInterval]>([])
-        let h = try Harness(sleep: { interval in
-            intervals.value.append(interval)
-            try await Task.sleep(for: .seconds(1000))
-        })
-        try await h.create(in: 600)           // inside its 30 min window
-        h.store.startTicking()
-        defer { h.store.stopTicking() }
-        await waitUntil { intervals.value.count >= 1 }
-        #expect(intervals.value == [1])
-    }
-
-    @Test func chipMutationRestartsTheLoopWithNewCadence() async throws {
-        let intervals = Box<[TimeInterval]>([])
-        let h = try Harness(sleep: { interval in
-            intervals.value.append(interval)
-            try await Task.sleep(for: .seconds(1000))
-        })
-        h.store.startTicking()
-        defer { h.store.stopTicking() }
+        let h = try Harness()
+        let driver = TaskDisplayTickDriver(
+            interval: { h.store.tickInterval }, tick: { h.store.tick() },
+            sleep: { interval in
+                intervals.value.append(interval)
+                try await Task.sleep(for: .seconds(1000))
+            })
+        h.store.onCadenceInputsChanged = { driver.cadenceInputsChanged() }
+        driver.start()
+        defer { driver.stop() }
         await waitUntil { intervals.value.count >= 1 }
         #expect(intervals.value == [30])
-        try await h.create(in: 600)           // enters its final stretch immediately
+        try await h.create(in: 600)                     // enters its final stretch immediately
         await waitUntil { intervals.value.count >= 2 }
         #expect(intervals.value.last == 1)
     }
