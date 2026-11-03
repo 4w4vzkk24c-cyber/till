@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Till
@@ -46,5 +47,18 @@ import Testing
 
     @Test func iconsPickedFromIconifyKeepTheirOwnLicenses() {
         #expect(Credits.text().contains("Icons you pick from Iconify keep their own licenses"))
+    }
+}
+
+@Suite struct AboutPanelTests {
+    @Test func onlyVisibleTitledWindowsAreRaised() {
+        #expect(AboutPanel.shouldRaise(styleMask: [.titled, .closable], isVisible: true))
+        #expect(!AboutPanel.shouldRaise(styleMask: [.titled, .closable], isVisible: false))
+    }
+
+    @Test func thePopoverWindowIsLeftAlone() {
+        // The MenuBarExtra window is not a titled window.
+        #expect(!AboutPanel.shouldRaise(styleMask: [.borderless], isVisible: true))
+        #expect(!AboutPanel.shouldRaise(styleMask: [.nonactivatingPanel], isVisible: true))
     }
 }
