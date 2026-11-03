@@ -1,0 +1,39 @@
+name: Till
+options:
+  bundleIdPrefix: com.crossedkeys   # ASSUMPTION: confirm the Crossed Keys Co. identifier before signing
+  deploymentTarget:
+    macOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Till:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/Till
+    info:
+      path: Sources/Till/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleName: Till
+        CFBundleDisplayName: Till
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.crossedkeys.till
+        ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  TillTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/TillTests
+    dependencies:
+      - target: Till
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.crossedkeys.till.tests
+        GENERATE_INFOPLIST_FILE: YES

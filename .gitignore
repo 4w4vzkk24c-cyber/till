@@ -2,3 +2,6 @@ _task-context-archive/
 .DS_Store
 .build/
 *.xcodeproj
+Sources/Till/Info.plist
+artifacts/
+.superpowers/
