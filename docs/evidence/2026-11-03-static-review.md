@@ -216,4 +216,3 @@ The operator supplied a 512 px transparent PNG of a seedling (checked here: pale
 
 ## Update 19 — README screenshot (operator request)
 The operator supplied a screenshot of the running app (REPORTED, image): the compact tiles with the glass edge, the OpenAI, Z.ai, Claude and opencode marks, tightened time units and the default icon in the composer. Added as `docs/images/popover.png` (703 x 686, 183 KB) and shown at the top of `README.md`. It is a single screenshot of one appearance (dark, over a dark wallpaper); light mode and the other states are still unseen.
-\n
