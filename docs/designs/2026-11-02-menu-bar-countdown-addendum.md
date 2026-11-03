@@ -70,3 +70,18 @@ Each is **[open]** for operator veto and is pinned by a test.
 4. **Failed notification delivery in reconciliation leaves the flag false** and stops the pass, so the next pass retries; a failed save after a successful delivery would therefore re-fire once. The alternative (save the flag first) risks a lost notification, which the seed forbids.
 5. **Notification text:** title is the chip label, or "Timer" when blank; body "Time’s up".
 6. **Not in this pass:** the display tick loop (§7.4), the `UNUserNotificationCenter` delegate wiring (it must call `TimerStore.handleDeliveryObserved`), the `DidWakeMessage` / `didBecomeActive` observers that call `reconcile()` / `refreshAuthorization()`, and all views.
+
+## A1.8 Tick loop and views — decisions the design left open
+
+All **[open]** for operator veto; each is isolated to one place so reversing it is local.
+
+1. **Label entry.** §4/§7.5 call for an optional label but the single NL field has no syntax for one. The header has a second optional "Label" field beside the deadline field. (`ChipsPopover`, `CreationFlow.label`)
+2. **Edit.** Right-click Edit (and the "Edit" accessibility action) loads only the label; the deadline field is blank with the placeholder "New deadline (optional)". Blank deadline = keep it (label-only edit, still rescheduled so the notification title matches). Typing a deadline replaces it; a date-only entry goes through the same time prompt. The original natural-language text is not reconstructed. (`CreationFlow.beginEdit`, `TimerStore.edit(deadline: nil)`)
+3. **Card layout reading.** §4 lists "label (caption, gray)" before the hero time and "optional text label" after it. The code renders one optional caption (the chip's label) between icon and hero, then the pause control. (`ChipCardView`)
+4. **Overdue chips show a visible Done** where the pause control would be (Done is the only exit; right-click alone is not discoverable). Pause/Resume stay in the context menu and accessibility actions.
+5. **Popover-open signal.** SwiftUI gives `MenuBarExtra` content no documented open/closed callback, so `popoverOpen` is driven by view `onAppear`/`onDisappear` **and** app active/resign. If either signal misfires the failure mode is a 1 s tick while closed (wasteful, never wrong), to be checked by the manual wake-rate test.
+6. **Icons until `IconProvider` exists.** New chips get the bundled `sf:timer` glyph and a rotating accent from a fixed six-colour palette; a non-`sf:` id reads the future raster cache (memoized, no per-tick I/O) and falls back to the glyph. Icon pick is not offered yet. (`FallbackIcons`, `ChipIconView`)
+7. **Bar icon colour (R3).** Amber/red are palette-coloured non-template `NSImage`s (the menu bar strips SwiftUI foreground colour from template images); normal/dimmed are template (dimmed at 0.45 opacity). The count is adjacent `Text`. Cheap fallbacks per §2 R3 remain: drop the count, or tint only.
+8. **Footer.** Notifications toggle (disabled with an explanation when the state is denied; the System Settings deep link `x-apple.systempreferences:com.apple.Notifications-Settings.extension` is unverified), "Open at login" toggle re-read on open/active/launch with a requires-approval note, and **Quit Till** (⌘Q).
+9. **Startup safety.** If the on-disk store cannot be opened the app runs from memory with a visible banner and never deletes or overwrites the store. Under XCTest the app (as test host) uses an in-memory store and starts no observers or ticking.
+10. **Notification presentation.** The delegate shows banner + sound even while the app is active, and treats both presentation and user interaction as "delivery observed" (sets `zeroCrossingHandled`).

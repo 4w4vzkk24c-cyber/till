@@ -15,7 +15,10 @@ struct Harness {
     init(
         status: NotificationAuthorization = .authorized,
         container: ModelContainer? = nil,
-        defaults: UserDefaults? = nil
+        defaults: UserDefaults? = nil,
+        sleep: @escaping @MainActor (TimeInterval) async throws -> Void = { _ in
+            try await Task.sleep(for: .seconds(1000))
+        }
     ) throws {
         let box = ClockBox(TestClock.at(2026, 11, 3, 10, 0))
         let switchBox = FailureSwitch()
@@ -34,7 +37,8 @@ struct Harness {
             persist: { context in
                 if switchBox.failSaves { throw SaveFailure() }
                 try context.save()
-            })
+            },
+            sleep: sleep)
     }
 
     func parsed(in seconds: TimeInterval, window: TimeInterval = 1800) -> ParsedDeadline {

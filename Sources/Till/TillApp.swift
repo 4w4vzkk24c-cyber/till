@@ -1,14 +1,20 @@
 import SwiftUI
 
-// PLACEHOLDER scene so the target has an entry point. Real UI (chips grid, add
-// field, footer with settings + Quit) comes with TimerStore/views; see design §7.5
-// and addendum A1.1.
 @main
 struct TillApp: App {
+    @State private var model: AppModel
+
+    init() {
+        _model = State(initialValue: AppModel())
+    }
+
     var body: some Scene {
-        MenuBarExtra("Till", systemImage: "timer") {
-            Text("Till")
-                .padding()
+        MenuBarExtra {
+            ChipsPopover(
+                store: model.store, creation: model.creation,
+                loginItems: model.loginItems, loadError: model.loadError)
+        } label: {
+            BarIconLabel(store: model.store)
         }
         .menuBarExtraStyle(.window)
     }

@@ -39,8 +39,17 @@ final class TimerStore {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let clock: @MainActor () -> Date
     @ObservationIgnored private let persist: @MainActor (ModelContext) throws -> Void
+    @ObservationIgnored private let sleep: @MainActor (TimeInterval) async throws -> Void
+    @ObservationIgnored private var tickTask: Task<Void, Never>?
+    /// True while the popover is visible. Drives the 1 s cadence (design §7.4).
+    @ObservationIgnored var popoverOpen = false {
+        didSet { if oldValue != popoverOpen { restartTickingIfRunning() } }
+    }
 
-    @ObservationIgnored private var lastKnownAuthorization: NotificationAuthorization?
+    /// Last notification authorization state this store observed (footer reads it).
+    private(set) var authorization: NotificationAuthorization?
+    /// Display clock. Updated by `tick()`; views read this, never `Date()`.
+    private(set) var now: Date
     @ObservationIgnored private var isReconciling = false
     @ObservationIgnored private var rerunRequested = false
     @ObservationIgnored private(set) var reconcilePassCount = 0
@@ -53,13 +62,18 @@ final class TimerStore {
         scheduler: any NotificationScheduling,
         defaults: UserDefaults = .standard,
         clock: @escaping @MainActor () -> Date = { Date() },
-        persist: @escaping @MainActor (ModelContext) throws -> Void = { try $0.save() }
+        persist: @escaping @MainActor (ModelContext) throws -> Void = { try $0.save() },
+        sleep: @escaping @MainActor (TimeInterval) async throws -> Void = {
+            try await Task.sleep(for: .seconds($0))
+        }
     ) {
         self.context = container.mainContext
         self.scheduler = scheduler
         self.defaults = defaults
         self.clock = clock
         self.persist = persist
+        self.sleep = sleep
+        self.now = clock()
         self.notificationsEnabled =
             defaults.object(forKey: Self.notificationsEnabledKey) as? Bool ?? true
         // Explicit save checkpoints only (addendum A1.1 item 6).
@@ -71,8 +85,49 @@ final class TimerStore {
     /// Launch: load chips, learn the current authorization state, run a reconciliation pass.
     func start() async throws {
         try reload()
-        lastKnownAuthorization = await scheduler.authorizationStatus()
+        authorization = await scheduler.authorizationStatus()
         await reconcile()
+    }
+
+    // MARK: - Display tick loop (design §7.4; seed cadence verbatim)
+
+    /// Remaining time always derives from `deadline - now`, never from accumulated ticks,
+    /// so sleep and drift self-correct on the next tick.
+    func tick() {
+        now = clock()
+    }
+
+    func nextTickInterval() -> TimeInterval {
+        TickCadence.interval(popoverOpen: popoverOpen, chips: chips.map(\.snapshot), now: clock())
+    }
+
+    /// Idempotent. The task is owned here and stopped by `stopTicking()` (or restarted by
+    /// `restartTickingIfRunning()`); it holds `self` weakly and never across the sleep.
+    func startTicking() {
+        guard tickTask == nil else { return }
+        tick()
+        let sleep = self.sleep
+        tickTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let interval = self?.nextTickInterval() else { return }
+                do { try await sleep(interval) } catch { return }
+                guard let store = self else { return }
+                store.tick()
+            }
+        }
+    }
+
+    func stopTicking() {
+        tickTask?.cancel()
+        tickTask = nil
+    }
+
+    var isTicking: Bool { tickTask != nil }
+
+    private func restartTickingIfRunning() {
+        guard tickTask != nil else { return }
+        stopTicking()
+        startTicking()
     }
 
     // MARK: - Mutations
@@ -122,20 +177,24 @@ final class TimerStore {
         await scheduleIfPossible(id: id, requestAuthorizationIfNeeded: false)
     }
 
-    /// Edit covers label and deadline only (design §7.5). A paused chip stays paused and
-    /// the new deadline becomes its frozen remaining time measured from now.
-    func edit(id: UUID, label: String?, deadline parsed: ParsedDeadline) async throws {
+    /// Edit covers label and deadline only (design §7.5). `deadline == nil` keeps the
+    /// deadline (label-only edit). A paused chip stays paused and a new deadline becomes
+    /// its frozen remaining time measured from now.
+    func edit(id: UUID, label: String?, deadline parsed: ParsedDeadline?) async throws {
         guard let chip = fetchEntity(id) else { throw TimerStoreError.notFound }
         let now = clock()
-        guard parsed.deadline > now else { throw TimerStoreError.deadlineInPast }
+        if let parsed, parsed.deadline <= now { throw TimerStoreError.deadlineInPast }
         chip.label = label
-        chip.deadline = parsed.deadline
-        chip.approachWindow = parsed.approachWindow
-        chip.kind = parsed.kind.rawValue
-        chip.zeroCrossingHandled = false
         let stillPaused = chip.pausedAt != nil
-        if stillPaused { chip.pausedAt = now }
+        if let parsed {
+            chip.deadline = parsed.deadline
+            chip.approachWindow = parsed.approachWindow
+            chip.kind = parsed.kind.rawValue
+            chip.zeroCrossingHandled = false
+            if stillPaused { chip.pausedAt = now }
+        }
         try commit()
+        // Reschedule so the pending trigger carries the new label and/or deadline.
         scheduler.removePending(ids: [id])
         if !stillPaused {
             await scheduleIfPossible(id: id, requestAuthorizationIfNeeded: false)
@@ -163,8 +222,8 @@ final class TimerStore {
 
     func refreshAuthorization() async {
         let status = await scheduler.authorizationStatus()
-        let previous = lastKnownAuthorization
-        lastKnownAuthorization = status
+        let previous = authorization
+        authorization = status
         if previous == .denied, status == .authorized, notificationsEnabled {
             await scheduleAllActiveFutures()
         }
@@ -235,7 +294,7 @@ final class TimerStore {
         if status == .notDetermined && requestAuthorizationIfNeeded {
             status = await scheduler.requestAuthorization() ? .authorized : .denied
         }
-        lastKnownAuthorization = status
+        authorization = status
         guard status == .authorized else { return }
         guard notificationsEnabled, let chip = fetchEntity(id), chip.pausedAt == nil,
               chip.deadline > clock() else { return }
@@ -274,6 +333,7 @@ final class TimerStore {
         let all = try context.fetch(FetchDescriptor<ChipEntity>())
         let byID = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         chips = DeadlineState.displayOrder(all.map(\.snapshot)).compactMap { byID[$0.id] }
+        restartTickingIfRunning()
     }
 
     /// Save now; on failure roll back the context and restore the in-memory list.
